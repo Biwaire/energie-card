@@ -1,0 +1,19 @@
+name: Publication
+# Quand vous publiez une release GitHub (ex. v1.0.1), le fichier de la carte y est joint automatiquement.
+on:
+  release:
+    types: [published]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm run build
+      - run: gh release upload "${{ github.event.release.tag_name }}" dist/energie-card.js --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
