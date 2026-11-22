@@ -6,5 +6,5 @@
   "type": "module",
   "repository": "Biwaire/energie-card",
   "scripts": { "build": "node tools/build.mjs src/energie.html dist/energie-card.js" },
-  "author": "Biwaire (adaptation Izypower) — d'après tazzdel/ha-energie-dashboard"
+  "author": "Biwaire (adaptation Izypower) — d'après tazzdel/ha-energie-dashboard-v2"
 }

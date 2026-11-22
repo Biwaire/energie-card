@@ -142,7 +142,7 @@ Vos réglages enregistrés dans le navigateur (thème, rappels, seuils, Watt) so
 
 ## Crédits
 
-- Tableau de bord d'origine : **[tazzdel](https://github.com/tazzdel)** — [ha-energie-dashboard](https://github.com/tazzdel/ha-energie-dashboard), conçu pour les batteries Zendure.
+- Tableau de bord d'origine : **[tazzdel](https://github.com/tazzdel)** — [ha-energie-dashboard-v2](https://github.com/tazzdel/ha-energie-dashboard-v2), conçu pour les batteries Zendure.
 - Photo de fond de la vue Réacteur : **tazzdel**, diffusée avec son accord.
 - Adaptation aux batteries **Izypower Titan** et version carte : **Biwaire**, avec l'accord écrit de l'auteur original.
 - Licence MIT, au nom des deux auteurs, choisie avec l'accord de tazzdel.
