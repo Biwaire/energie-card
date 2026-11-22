@@ -12,4 +12,6 @@ jobs:
           node-version: 20
       - run: npm run build
       - run: node --check dist/energie-card.js
-      - run: git diff --exit-code dist/ || (echo "::error::dist/energie-card.js n'est pas à jour : lancez « npm run build » puis committez." && exit 1)
+      # si cette étape échoue : lancez « npm run build » puis committez dist/energie-card.js
+      - name: Vérifier que dist est à jour
+        run: git diff --exit-code dist/
