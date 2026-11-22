@@ -1,0 +1,31 @@
+# Exemple complet : la configuration d'origine de Biwaire (2 Izypower Titan, borne Isypower, Gemini).
+# À coller dans l'éditeur YAML de la carte. Adaptez les identifiants à VOTRE installation,
+# ou supprimez les lignes : un champ absent = détection automatique.
+type: custom:energie-card
+entities:
+  pv: sensor.production_solaire
+  ev: sensor.isypower_ev_charger_puissance
+batteries:
+  - name: Titan
+    level: sensor.izypower_titan_titan_pile_average
+    power: sensor.izypower_titan_titan_ac_input_and_output
+    temperature: sensor.izypower_titan_titan_battery_temperature
+    min: number.cluster_soc_security_esp
+    max: number.cluster_charge_soc_max
+  - name: Titan Slave
+    level: sensor.titan_secondaire_titan_pile_average
+    power: sensor.titan_secondaire_titan_ac_input_and_output
+    temperature: sensor.titan_secondaire_titan_battery_temperature
+    min: number.cluster_soc_security_esp
+    max: number.cluster_charge_soc_max
+packs: [1, 1]
+kwh_pack: 4.02
+ecs_tile:
+  haute: sensor.temperature_ballon_haut_filtree
+  basse: sensor.temperature_ballon_bas_filtree
+tarif_hp: 0.176
+tarif_hc: 0.1361
+hc_plages:
+  - ["01:04", "06:34"]
+  - ["14:34", "17:04"]
+agent: conversation.google_ai_conversation_3
