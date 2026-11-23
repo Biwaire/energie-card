@@ -120,6 +120,10 @@ height: calc(100vh - 56px)  # hauteur fixe (prioritaire)
 Un exemple réel complet se trouve dans [`examples/config-biwaire.yaml`](examples/config-biwaire.yaml).
 </details>
 
+## Boutons déplaçables
+
+Les boutons **⚡ Énergie / ⚛ Réacteur** et **🎨** se déplacent : appuyez dessus et faites-les glisser où vous voulez. Un simple appui garde leur action habituelle. La position est mémorisée sur chaque appareil, séparément pour le téléphone en portrait et pour les écrans larges.
+
 ## Watt 👷 et l'assistant IA
 
 Watt répond tout seul aux questions courantes (autonomie, économies, « puis-je lancer un appareil ? »…).
