@@ -25,7 +25,11 @@ const BASE_CSS = `:host{display:block}
 .zh{position:relative;display:block;width:100%;aspect-ratio:16/9;overflow:hidden;contain:layout paint style;container-type:inline-size;container-name:zh;transform:translateZ(0);border-radius:var(--ha-card-border-radius,12px)}
 .zh.fit{max-height:calc(100dvh - var(--header-height, 56px) - var(--energie-card-offset, 16px))}
 .zh:fullscreen{border-radius:0;max-height:none}
-.zhead{display:none}`;
+.zhead{display:none}
+:host(.pfs){position:relative;z-index:2147483000}
+.zh.pfs{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;height:100dvh!important;max-height:none!important;aspect-ratio:auto!important;border-radius:0!important;z-index:2147483000}
+#fsbtn{left:8px;bottom:8px}
+#fsbtn svg{width:20px;height:20px;pointer-events:none}`;
 
 function rwCss(css) {
   return css
@@ -207,6 +211,7 @@ class EnergieCard extends HTMLElement {
     const PHONE_W = 900, BAR = 64;
     const layoutCtl = () => {
       const w = zh.clientWidth, c = card._config; if (!w) return;
+      if (run.fs) return;
       if (w < PHONE_W && !c.height && c.aspect_ratio == null) {
         if (!run.phone) { if (zh.clientHeight > w * 9 / 16 + 4) return; run.phone = true; }  // mode panneau : déjà assez haut
         const h = Math.round(w * 9 / 16 + 2 * BAR) + 'px';
@@ -221,7 +226,50 @@ class EnergieCard extends HTMLElement {
       RUN(docP, winP, winP, W, W, sT, sI, cT, cI, rAF, cAF, addL, remL, con, H, card, card._config || {});
     } catch (e) { fail(e); }
     // boutons flottants déplaçables (position mémorisée sur cet appareil)
-    run.drag = ['vsw', 'thbtn'].map(id => this._draggable(root.getElementById(id), zh, id, run)).filter(Boolean);
+    this._fullscreen(zh, root, run);
+    run.drag = ['vsw', 'thbtn', 'fsbtn'].map(id => this._draggable(root.getElementById(id), zh, id, run)).filter(Boolean);
+  }
+
+  /* bouton plein écran : vrai plein écran si possible, sinon la carte couvre tout l'écran de l'application (iPhone) */
+  _fullscreen(zh, root, run) {
+    if (this._config.fullscreen_button === false) return;
+    const card = this, D = document;
+    const ICON_ON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
+    const ICON_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>';
+    const b = D.createElement('button'); b.id = 'fsbtn'; b.type = 'button';
+    b.style.cssText = 'position:fixed;z-index:60;width:36px;height:36px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:10px;cursor:pointer;color:#cfe8ff;background:rgba(10,18,32,.8);border:1px solid rgba(120,180,255,.35);box-shadow:0 2px 10px rgba(0,0,0,.45)';
+    const th = root.getElementById('thbtn');            // même allure que le bouton 🎨
+    if (th) { const cs = getComputedStyle(th); ['background', 'border', 'borderRadius', 'boxShadow', 'zIndex'].forEach(k => { if (cs[k]) b.style[k] = cs[k]; }); }
+    zh.appendChild(b);
+    // l'élément en plein écran est dans la carte : le document ne voit que la carte elle-même
+    const isFs = () => root.fullscreenElement === zh || (D.fullscreenElement || D.webkitFullscreenElement) === card;
+    const upd = () => {
+      const on = isFs() || zh.classList.contains('pfs');
+      run.fs = on; b.innerHTML = on ? ICON_OFF : ICON_ON; b.title = on ? 'Quitter le plein écran' : 'Plein écran';
+      if (!on) { card._size(zh); }
+    };
+    const pseudo = on => {
+      zh.classList.toggle('pfs', on); card.classList.toggle('pfs', on);
+      if (on) { run.phone = false; zh.style.removeProperty('height'); zh.style.removeProperty('aspect-ratio'); }
+      upd();
+    };
+    b.addEventListener('click', async e => {
+      e.stopPropagation();
+      if (isFs()) { try { screen.orientation.unlock(); } catch (er) {} (D.exitFullscreen || D.webkitExitFullscreen).call(D); return; }
+      if (zh.classList.contains('pfs')) { pseudo(false); return; }
+      const req = zh.requestFullscreen || zh.webkitRequestFullscreen;
+      try {
+        if (!req) throw new Error('fullscreen indisponible');
+        run.fs = true;
+        await req.call(zh, { navigationUI: 'hide' });
+        if (card._config.fullscreen_landscape !== false) { try { await screen.orientation.lock('landscape'); } catch (er) {} }
+      } catch (er) { pseudo(true); }
+    });
+    const onChange = () => { if (!isFs()) { try { screen.orientation.unlock(); } catch (er) {} } upd(); };
+    ['fullscreenchange', 'webkitfullscreenchange'].forEach(t => { D.addEventListener(t, onChange); run.listeners.push([D, t, onChange]); });
+    const onKey = e => { if (e.key === 'Escape' && zh.classList.contains('pfs')) pseudo(false); };
+    D.addEventListener('keydown', onKey); run.listeners.push([D, 'keydown', onKey]);
+    upd();
   }
 
   /* glisser-déposer d'un bouton flottant ; un simple appui garde son action habituelle */
@@ -280,6 +328,7 @@ class EnergieCard extends HTMLElement {
     try { run.mo.disconnect(); run.ro.disconnect(); } catch (e) {}
     run.audio.forEach(a => { try { a.close(); } catch (e) {} });
     try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) {}
+    this.classList.remove('pfs');
     if (this.shadowRoot) this.shadowRoot.innerHTML = '';
     this._run = null;
   }
