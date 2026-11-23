@@ -28,7 +28,7 @@
 */
 /*
  ╔══════════════════════════════════════════════════════════════════════╗
- ║  ENERGIE-CARD 1.0.1 — carte Lovelace (custom:energie-card)            ║
+ ║  ENERGIE-CARD 1.0.2 — carte Lovelace (custom:energie-card)            ║
  ╚══════════════════════════════════════════════════════════════════════╝
  Installation : HACS (dépôt personnalisé, type « Tableau de bord ») ou manuelle (voir README).
  Configuration : éditeur visuel de la carte. Sans réglage, les capteurs sont détectés automatiquement.
@@ -36,7 +36,7 @@
 */
 (() => {
 'use strict';
-const TAG = 'energie-card', VERSION = '1.0.1';
+const TAG = 'energie-card', VERSION = '1.0.2';
 if (customElements.get(TAG)) return;
 console.info('%c ENERGIE-CARD %c ' + VERSION + ' ', 'color:#05080f;background:#2dff8a;font-weight:700', 'color:#2dff8a;background:#05080f');
 
@@ -1931,7 +1931,17 @@ class EnergieCard extends HTMLElement {
     }));
     run.mo.observe(root, { childList: true, subtree: true, characterData: true });
 
-    run.ro = new ResizeObserver(() => run.resize.forEach(f => { try { f.call(winP, { type: 'resize' }); } catch (e) { fail(e); } }));
+    /* téléphone : bandes au-dessus et en dessous du tableau pour les boutons flottants (comme la version HTML) */
+    const PHONE_W = 900, BAR = 64;
+    const layoutCtl = () => {
+      const w = zh.clientWidth, c = card._config; if (!w) return;
+      if (w < PHONE_W && !c.height && c.aspect_ratio == null) {
+        if (!run.phone) { if (zh.clientHeight > w * 9 / 16 + 4) return; run.phone = true; }  // mode panneau : déjà assez haut
+        const h = Math.round(w * 9 / 16 + 2 * BAR) + 'px';
+        if (zh.style.height !== h) { zh.style.setProperty('height', h, 'important'); zh.style.setProperty('aspect-ratio', 'auto', 'important'); }
+      } else if (run.phone) { run.phone = false; card._size(zh); }
+    };
+    run.ro = new ResizeObserver(() => { layoutCtl(); run.resize.forEach(f => { try { f.call(winP, { type: 'resize' }); } catch (e) { fail(e); } }); });
     run.ro.observe(zh);
 
     const H = i => zb.insertAdjacentHTML('beforeend', HTML[i]);
