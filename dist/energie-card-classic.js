@@ -116,7 +116,7 @@ const ECS_TILE=Object.assign({haute:'',basse:'',grande:'',desinf:''},__C.ecs_til
    INVERT_BAT  true si la charge/décharge est affichée à l'envers                          */
 const UN=[];
 const BATSET={};
-if(Array.isArray(__C.batteries)){__C.batteries.slice(0,4).forEach((b,i)=>{if(!b||!b.level)return;const id='b'+(UN.length+1);UN.push({id,name:b.name||('Batterie '+(UN.length+1)),lvl:b.level,pw:b.power||'',tmp:b.temperature||'sensor.aucun',k:b.invert?-1:1});if(b.min||b.max)BATSET[id]={min:b.min||'',max:b.max||''}})}
+if(Array.isArray(__C.batteries)){__C.batteries.slice(0,4).forEach((b,i)=>{if(!b||!b.level)return;const id='b'+(UN.length+1);UN.push({id,name:b.name||('Batterie '+(UN.length+1)),lvl:b.level,pw:b.power||'',tmp:b.temperature||'sensor.aucun',k:(/bat_in_out/.test(b.power||'')?-1:1)*(b.invert?-1:1)*(__C.invert_bat?-1:1)});if(b.min||b.max)BATSET[id]={min:b.min||'',max:b.max||''}})}
 const PACKS=Array.isArray(__C.packs)?__C.packs:[1,1,1,1];
 const KWH_PACK=__C.kwh_pack!=null?+__C.kwh_pack:2.1;
 const INVERT_BAT=!!__C.invert_bat;
