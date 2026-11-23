@@ -9,8 +9,13 @@ Deux vues au choix : **⚡ Énergie** (poste de supervision) et **⚛ Réacteur*
 
 Et deux **styles** : **Nouveau** (réacteur sombre et net, barre de navigation) ou **Classique** (salle des machines claire, version d'origine). Le choix se fait dans l'éditeur de la carte.
 
-![Vue Énergie](images/energie.jpg)
-![Vue Réacteur](images/reacteur.jpg)
+### Style Nouveau (par défaut)
+![Vue Énergie — style Nouveau](images/energie.jpg)
+![Vue Réacteur — style Nouveau](images/reacteur.jpg)
+
+### Style Classique
+![Vue Énergie — style Classique](images/classique-energie.jpg)
+![Vue Réacteur — style Classique](images/classique-reacteur.jpg)
 
 ---
 
