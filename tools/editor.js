@@ -14,7 +14,7 @@ const LABELS = {
   weather: 'Météo', house_temp: 'Température de la maison',
   today: 'Prévision Solcast aujourd’hui', tomorrow: 'Prévision Solcast demain',
   haute: 'Sonde haute', basse: 'Sonde basse', grande: 'Grande chauffe', desinf: 'Dernière désinfection',
-  name: 'Nom affiché', level: 'Niveau (%)', power: 'Puissance charge/décharge (W)', temperature: 'Température',
+  name: 'Nom affiché', level: 'Niveau (%)', power: 'Puissance charge/décharge (W)', power_in: 'Ou : puissance entrée / charge (W)', power_out: 'Ou : puissance sortie / décharge (W)', temperature: 'Température',
   min: 'Réglage du mini (number.*)', max: 'Réglage du maxi (number.*)', invert: 'Charge/décharge inversée',
   portail: 'Portail', garage: 'Porte de garage', volets: 'Volets', chauffage: 'Chauffage', scenarios: 'Scénarios',
   voiture: 'Voiture électrique', ballon: 'Ballon d’eau chaude', rappels: 'Rappels 🔔', chauffeeau: 'Tuile chauffe-eau', watt: 'Assistant Watt 👷',
@@ -33,9 +33,11 @@ const HELPERS = {
   fit_screen: 'La carte entière reste visible sans défiler',
   agent: 'Vide = assistant par défaut de Home Assistant',
   level: 'Laissez toutes les batteries vides pour la détection automatique',
+  power_in: 'Batteries avec deux capteurs (Zendure : output_pack_power / pack_input_power). Remplace la case du dessus.',
 };
 const bat = i => ({ type: 'expandable', name: 'bat' + i, title: 'Batterie ' + i, icon: 'mdi:battery-high', schema: [
   { name: 'name', selector: { text: {} } }, { name: 'level', selector: SENSOR }, { name: 'power', selector: SENSOR },
+  { type: 'grid', name: '', schema: [{ name: 'power_in', selector: SENSOR }, { name: 'power_out', selector: SENSOR }] },
   { name: 'temperature', selector: SENSOR },
   { name: 'capacity', selector: NUM(0.001, 'kWh') },
   { type: 'grid', name: '', schema: [{ name: 'min', selector: ENT('number') }, { name: 'max', selector: ENT('number') }] },

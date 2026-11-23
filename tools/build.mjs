@@ -80,10 +80,33 @@ patch("const SOL={today:'',tomorrow:''};", "const SOL=Object.assign({today:'',to
 patchRe(/const ECS_TILE=\{[^\n]*?\};/, "const ECS_TILE=Object.assign({haute:'',basse:'',grande:'',desinf:''},__C.ecs_tile||{});", 'ECS_TILE');
 patchRe(/const UN=\[[\s\S]*?\];\nconst BATSET=\{[^\n]*\};/,
   "const UN=[];\nconst BATSET={};\n" +
-  "if(Array.isArray(__C.batteries)){__C.batteries.slice(0,4).forEach((b,i)=>{if(!b||!b.level)return;const id='b'+(UN.length+1);UN.push({id,name:b.name||('Batterie '+(UN.length+1)),lvl:b.level,pw:b.power||'',tmp:b.temperature||'sensor.aucun',k:(/bat_in_out/.test(b.power||'')?-1:1)*(b.invert?-1:1)*(__C.invert_bat?-1:1)});if(b.min||b.max)BATSET[id]={min:b.min||'',max:b.max||''}})}", 'UN/BATSET');
+  "if(Array.isArray(__C.batteries)){__C.batteries.slice(0,4).forEach((b,i)=>{if(!b||!b.level)return;const id='b'+(UN.length+1);const io=!!(b.power_in||b.power_out);UN.push({id,name:b.name||('Batterie '+(UN.length+1)),lvl:b.level,pw:io?'':(b.power||''),pin:io?(b.power_in||''):'',pout:io?(b.power_out||''):'',tmp:b.temperature||'sensor.aucun',k:(!io&&/bat_in_out/.test(b.power||'')?-1:1)*(b.invert?-1:1)*(__C.invert_bat?-1:1)});if(b.min||b.max)BATSET[id]={min:b.min||'',max:b.max||''}})}", 'UN/BATSET');
 patch("const PACKS=[1,1];", "const PACKS=Array.isArray(__C.packs)?__C.packs:[1,1,1,1];", 'PACKS');
 patch("const KWH_PACK=4.02;", "const KWH_PACK=__C.kwh_pack!=null?+__C.kwh_pack:2.1;", 'KWH_PACK');
 // capacité propre à chaque batterie (kWh) : prioritaire sur packs × capacité d'un pack
+// Zendure & co : puissance batterie en deux capteurs (entrée = charge, sortie = décharge)
+function patchAll(find, repl, label) {
+  const n = code.split(find).length - 1;
+  if (n < 1) { FAILS.push(`retouche « ${label} » : introuvable`); return; }
+  code = code.split(find).join(repl);
+}
+patch("const okPw=!!st[u.pw]&&", "const __ok=x=>!!x&&!!st[x]&&!['unknown','unavailable','none',''].includes(String(st[x].state))&&!isNaN(parseFloat(st[x].state));const okPw=(u.pin||u.pout)?(__ok(u.pin)||__ok(u.pout)):!!st[u.pw]&&", 'entrée/sortie : capteur ok');
+patch("D.p[i]=okPw?(u.k===undefined?-1:u.k)*rd(st,u.pw):0;", "D.p[i]=okPw?(u.k===undefined?-1:u.k)*((u.pin||u.pout)?(__ok(u.pin)?rd(st,u.pin):0)-(__ok(u.pout)?rd(st,u.pout):0):rd(st,u.pw)):0;", 'entrée/sortie : calcul');
+patch("D.battMissing.push({id:u.pw,", "D.battMissing.push({id:u.pw||u.pin||u.pout,", 'entrée/sortie : capteur manquant');
+patch("missingPw=(D.battMissing||[]).some(x=>x.id===u.pw)", "missingPw=(D.battMissing||[]).some(x=>x.id===(u.pw||u.pin||u.pout))", 'entrée/sortie : affichage');
+patchAll("UN.forEach((u,i)=>put(u.pw,'b'+i));", "UN.forEach((u,i)=>{if(u.pin||u.pout){put(u.pin,'bi'+i);put(u.pout,'bo'+i)}else put(u.pw,'b'+i)});", 'entrée/sortie : historique');
+patchAll("(m['b'+i]||0)", "(m['b'+i]!==undefined?m['b'+i]:(m['bi'+i]||0)-(m['bo'+i]||0))", 'entrée/sortie : historique calcul');
+patchAll("...UN.map(u=>u.pw)]", "...UN.flatMap(u=>(u.pin||u.pout)?[u.pin,u.pout].filter(Boolean):[u.pw])]", 'entrée/sortie : statistiques');
+patch("const unitP=i=>({id:UN[i].pw,", "const unitP=i=>({id:UN[i].pw||UN[i].pin||UN[i].pout,", 'entrée/sortie : graphique');
+// détection automatique : ignorer les % de réglage (min_soc, soc_set…), une seule batterie par appareil, Zendure entrée/sortie
+patch("&&!/phone|telephone|tablet|tablette|voiture|car_|_ev|watch|mobile|iphone|pixel|samsung|remote|ups/.test(tx(i)));",
+  "&&!/phone|telephone|tablet|tablette|voiture|car_|_ev|watch|mobile|iphone|pixel|samsung|remote|ups/.test(tx(i))&&!/min_?soc|max_?soc|soc_?set|soc_?min|soc_?max|soc_?limit|soc_?target|target|limit|reserve|health|soh|cycle|status|state$/.test(i.replace(/^sensor\\./,'')));", 'détection : réglages exclus');
+patch("if(pre.length<10)return;", "if(pre.length<10||found.some(f=>f._pre===pre))return;const zin=pick(sens.filter(k=>k.startsWith(pre)&&isW(k)&&/output_pack_power|pack_?charge_?power|battery_?charge_?power/.test(k)),()=>1),zout=pick(sens.filter(k=>k.startsWith(pre)&&isW(k)&&/pack_input_power|pack_?discharge_?power|battery_?discharge_?power/.test(k)),()=>1);", 'détection : doublons + Zendure');
+patch("const pw=pick(sens.filter(k=>k.startsWith(pre)&&isW(k))", "const pw=(zin||zout)?'':pick(sens.filter(k=>k.startsWith(pre)&&isW(k))", 'détection : puissance');
+code = code.replace(/const pw=\(zin\|\|zout\)\?'':pick\(([^\n]*?)\);if\(!pw\)return;/, (m, a) => `const pw=(zin||zout)?'':pick(${a});if(!pw&&!zin&&!zout)return;`);
+if (!/if\(!pw&&!zin&&!zout\)return;/.test(code)) FAILS.push('retouche « détection : sans puissance » : introuvable');
+patch("found.push({id:'b'+found.length,name:nm,lvl:i,pw,tmp", "found.push({id:'b'+found.length,_pre:pre,name:nm,lvl:i,pw,pin:zin||'',pout:zout||'',tmp", 'détection : entrée/sortie');
+if (code.includes("replace(/_(electric_level|pile_average)$/,'')")) patch("replace(/_(electric_level|pile_average)$/,'')", "replace(/_(electric_level|pile_average|soc_level|battery_level|state_of_charge|soc)$/,'')", 'mini/maxi : préfixe');
 patch("const capOf=i=>(PACKS.length?", "const capOf=i=>(Array.isArray(__C.batteries)&&__C.batteries.filter(b=>b&&(b.level||b.capacity))[i]&&+__C.batteries.filter(b=>b&&(b.level||b.capacity))[i].capacity>0)?+__C.batteries.filter(b=>b&&(b.level||b.capacity))[i].capacity:(PACKS.length?", 'capacité par batterie');
 patch("const INVERT_BAT=false;", "const INVERT_BAT=!!__C.invert_bat;", 'INVERT_BAT');
 patch("const TARIF_HP=0.176,TARIF_HC=0.1361;", "const TARIF_HP=__C.tarif_hp!=null?+__C.tarif_hp:0.176,TARIF_HC=__C.tarif_hc!=null?+__C.tarif_hc:0.1361;", 'TARIFS');
@@ -117,7 +140,7 @@ code = code.split('batteries Izypower Titan, voiture').join('batteries domestiqu
 code = code.split('izypower|isypower|titan').join('izypower|isypower|titan|zendure|solarflow');
 code += `
 ;/* marque affichée selon les batteries détectées */
-(function(){var last='',FIX={isypower:'Isypower',izypower:'Izypower',zendure:'Zendure',none:'Batteries'};function upd(){try{var ids=UN.map(function(u){return String(u.lvl||'')+' '+String(u.pw||'')}).join(' ').toLowerCase();
+(function(){var last='',FIX={isypower:'Isypower',izypower:'Izypower',zendure:'Zendure',none:'Batteries'};function upd(){try{var ids=UN.map(function(u){return String(u.lvl||'')+' '+String(u.pw||'')+' '+String(u.pin||'')}).join(' ').toLowerCase();
  var b=FIX[__C.brand]||(/isypower/.test(ids)?'Isypower':/pile_average|izypower|titan/.test(ids)?'Izypower':/electric_level|bat_in_out|zendure|solarflow|hyper_?2000|hub_?2000|ace_?1500|aio/.test(ids)?'Zendure':'Batteries');
  if(b!==last){last=b;document.querySelectorAll('.zbrand').forEach(function(e){e.textContent=b})}}catch(e){}}
  upd();setInterval(upd,3000)})();

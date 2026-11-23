@@ -43,11 +43,13 @@ const BASE_CSS = `/* la carte ne doit rien hériter de la typographie de Home As
 .zh.fit{max-height:calc(100dvh - var(--header-height, 56px) - var(--energie-card-offset, 16px))}
 .zh:fullscreen{border-radius:0;max-height:none}
 .zhead{display:none}
+.zh.paused *,.zh.paused *::before,.zh.paused *::after{animation-play-state:paused!important}
 :host(.pfs){position:relative;z-index:2147483000}
 .zh.pfs{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;height:100dvh!important;max-height:none!important;aspect-ratio:auto!important;border-radius:0!important;z-index:2147483000}
 #fsbtn{left:8px;bottom:8px}
-#vdots{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);z-index:60;display:flex;gap:10px;padding:6px 10px;border-radius:12px;background:rgba(5,8,15,.45)}
-#vdots i{display:block;width:9px;height:9px;border-radius:50%;background:rgba(160,200,255,.35);cursor:pointer}
+/* points de vue : coin bas droit, à la verticale (ne cachent plus la barre de navigation) */
+#vdots{position:absolute;right:8px;bottom:8px;z-index:60;display:flex;flex-direction:column;gap:12px;padding:10px 8px;border-radius:12px;background:rgba(5,8,15,.55)}
+#vdots i{display:block;width:11px;height:11px;border-radius:50%;background:rgba(160,200,255,.35);cursor:pointer}
 #vdots i.on{background:#4de1ff;box-shadow:0 0 6px #4de1ff}
 #fsbtn svg{width:20px;height:20px;pointer-events:none}`;
 
@@ -145,7 +147,7 @@ class EnergieCard extends HTMLElement {
     zh.appendChild(zb); root.appendChild(zh);
     this._size(zh);
 
-    const run = this._run = { dead: false, timers: new Set(), intervals: new Set(), rafs: new Set(), listeners: [],
+    const run = this._run = { visible: true, dead: false, timers: new Set(), intervals: new Set(), rafs: new Set(), listeners: [],
       resize: [], own: Object.create(null), audio: [], css: new WeakMap(), mo: null, ro: null };
 
     /* erreurs : bandeau rouge dans la carte (comme le fichier d'origine), sans toucher à la console de Home Assistant */
@@ -159,11 +161,36 @@ class EnergieCard extends HTMLElement {
 
     /* minuteries suivies (arrêtées quand la carte disparaît) */
     const sT = (fn, ms, ...a) => { const id = W.setTimeout(() => { run.timers.delete(id); if (run.dead) return; try { typeof fn === 'function' && fn(...a); } catch (e) { fail(e); } }, ms); run.timers.add(id); return id; };
-    const sI = (fn, ms, ...a) => { const id = W.setInterval(() => { if (run.dead) return; try { typeof fn === 'function' && fn(...a); } catch (e) { fail(e); } }, ms); run.intervals.add(id); return id; };
+    // minuteries rapides (≤ 250 ms) = animations : suspendues hors écran, une sur deux en mode Économie
+    const sI = (fn, ms, ...a) => {
+      const fast = +ms <= 250; let n = 0;
+      const id = W.setInterval(() => {
+        if (run.dead) return;
+        if (fast && (!run.visible || (card._config.animations === 'eco' && (n++ & 1)))) return;
+        try { typeof fn === 'function' && fn(...a); } catch (e) { fail(e); }
+      }, ms);
+      run.intervals.add(id); return id;
+    };
     const cT = id => { run.timers.delete(id); W.clearTimeout(id); };
     const cI = id => { run.intervals.delete(id); W.clearInterval(id); };
-    const rAF = fn => { const id = W.requestAnimationFrame(t => { run.rafs.delete(id); if (run.dead) return; try { fn(t); } catch (e) { fail(e); } }); run.rafs.add(id); return id; };
-    const cAF = id => { run.rafs.delete(id); W.cancelAnimationFrame(id); };
+    /* animations : limitées en mode Économie (30 images/s) et suspendues quand la carte n'est pas visible */
+    const minDt = card._config.animations === 'eco' ? 1000 / 30 : 0;
+    run.visible = true; run.held = new Map(); run.lastFrame = -1e9;
+    let seq = 0; const real = new Map();
+    const rAF = fn => {
+      const id = ++seq;
+      const tick = t => {
+        if (run.dead) return;
+        if (!run.visible) { real.delete(id); run.held.set(id, tick); return; }          // en pause : reprise à l'affichage
+        if (minDt && t !== run.lastFrame && t - run.lastFrame < minDt - 1) { real.set(id, W.requestAnimationFrame(tick)); return; }
+        run.lastFrame = t; real.delete(id); run.rafs.delete(id);
+        try { fn(t); } catch (e) { fail(e); }
+      };
+      real.set(id, W.requestAnimationFrame(tick)); run.rafs.add(id);
+      return id;
+    };
+    const cAF = id => { run.rafs.delete(id); run.held.delete(id); const r = real.get(id); if (r) W.cancelAnimationFrame(r); real.delete(id); };
+    run.cancelAll = () => { real.forEach(r => W.cancelAnimationFrame(r)); real.clear(); run.held.clear(); };
 
     /* écouteurs « fenêtre » : redimensionnement = taille de la carte, clics/touches = dans la carte seulement */
     const addL = (type, fn, opt) => {
@@ -255,6 +282,19 @@ class EnergieCard extends HTMLElement {
     };
     run.ro = new ResizeObserver(() => { layoutCtl(); (run.drag || []).forEach(f => f()); run.resize.forEach(f => { try { f.call(winP, { type: 'resize' }); } catch (e) { fail(e); } }); });
     run.ro.observe(zh);
+
+    // pause quand la carte est hors écran, l'onglet masqué ou la vue Home Assistant changée
+    let inView = true;
+    const setVis = () => {
+      const v = inView && !D.hidden && card.isConnected;
+      if (v === run.visible) return;
+      run.visible = v; zh.classList.toggle('paused', !v);
+      if (v) { const h = [...run.held.values()]; run.held.clear(); h.forEach(f => real.set(++seq, W.requestAnimationFrame(f))); }
+    };
+    run.io = new IntersectionObserver(es => { inView = es.some(e => e.isIntersecting); setVis(); });
+    run.io.observe(zh);
+    const onVis = () => setVis();
+    D.addEventListener('visibilitychange', onVis); run.listeners.push([D, 'visibilitychange', onVis]);
 
     const H = i => zb.insertAdjacentHTML('beforeend', HTML[i]);
     try {
@@ -405,9 +445,9 @@ class EnergieCard extends HTMLElement {
   _teardown() {
     const run = this._run; if (!run) return;
     run.dead = true;
-    run.timers.forEach(id => clearTimeout(id)); run.intervals.forEach(id => clearInterval(id)); run.rafs.forEach(id => cancelAnimationFrame(id));
+    run.timers.forEach(id => clearTimeout(id)); run.intervals.forEach(id => clearInterval(id)); run.cancelAll && run.cancelAll();
     run.listeners.forEach(([t, ty, f, o]) => { try { t.removeEventListener(ty, f, o); } catch (e) {} });
-    try { run.mo.disconnect(); run.ro.disconnect(); } catch (e) {}
+    try { run.mo.disconnect(); run.ro.disconnect(); run.io && run.io.disconnect(); } catch (e) {}
     run.audio.forEach(a => { try { a.close(); } catch (e) {} });
     try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) {}
     this.classList.remove('pfs');
