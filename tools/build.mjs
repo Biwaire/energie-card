@@ -43,9 +43,10 @@ const stylesOut = styles.map(s => ({ id: s.id, css: rwCss(s.css) }));
 /* ---------- 3. scripts : retouches ciblées (chacune doit trouver exactement 1 occurrence) ---------- */
 let code = scripts.map((s, i) => `/* ── script ${i + 1}/${scripts.length} ── */\n__H(${i});\n${s}\n;`).join('\n') + `\n__H(${scripts.length});\n`;
 
+const FAILS = [];
 function patch(find, repl, label) {
   const n = code.split(find).length - 1;
-  if (n !== 1) throw new Error(`retouche « ${label} » : ${n} occurrence(s) au lieu de 1`);
+  if (n !== 1) { FAILS.push(`retouche « ${label} » : ${n} occurrence(s) au lieu de 1`); return; }
   code = code.replace(find, () => repl);
 }
 
@@ -60,7 +61,7 @@ patch("var P=window.parent;if(!P||P===window)return;", "var P=window.parent;retu
 // Chaque utilisateur règle ses capteurs dans l'éditeur visuel de la carte (ou en YAML).
 function patchRe(re, repl, label) {
   const m = code.match(new RegExp(re.source, re.flags.replace('g', '') + 'g'));
-  if (!m || m.length !== 1) throw new Error(`retouche « ${label} » : ${m ? m.length : 0} occurrence(s) au lieu de 1`);
+  if (!m || m.length !== 1) { FAILS.push(`retouche « ${label} » : ${m ? m.length : 0} occurrence(s) au lieu de 1`); return; }
   code = code.replace(re, () => repl);
 }
 patch("const MODULES={", "const MODULES=Object.assign({", 'MODULES début');
@@ -86,8 +87,11 @@ patchRe(/var AGENT='[^']*';/, "var AGENT=__C.agent||'';", 'AGENT');
 patchRe(/var MEM=\[\],AG='[^']*';/, "var MEM=[],AG=__C.agent||undefined;", 'AG');
 
 // rappels : module désactivé = aucune popup ; liste de départ sans les jours de poubelle personnels
-patch("if(!M.rappels)hide('#rxbell,#rxm');", "if(!M.rappels)hide('#rxbell,#rxm,#rxp');", 'rappels masqués');
+if (!/if\(!M\.rappels\)hide\('[^']*#rxp/.test(code))   // déjà corrigé dans les versions récentes
+  patch("if(!M.rappels)hide('#rxbell,#rxm');", "if(!M.rappels)hide('#rxbell,#rxm,#rxp');", 'rappels masqués');
 patchRe(/function seed\(\)\{return\[[\s\S]*?\]\}/, "function seed(){return[\n{id:'car',t:'Voiture à charger',ic:'🔌',col:'#4de1ff',k:'car',thr:30}]}", 'rappels seed');
+
+if (FAILS.length) { console.error(FAILS.join('\n')); process.exit(1); }
 
 // appels « nus » à des fonctions posées sur window (window est propre à chaque carte)
 code = code.replace(/(?<![.\w$'"])(WATT_(?:ACT|INSTR|CTX2|APPS|PARSE))\(/g, 'window.$1(');
