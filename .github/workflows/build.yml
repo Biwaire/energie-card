@@ -1,4 +1,5 @@
 name: Construction de la carte
+# Vérifie que dist/energie-card.js correspond bien à src/energie.html (sinon : npm run build puis commit).
 on:
   push:
   pull_request:
