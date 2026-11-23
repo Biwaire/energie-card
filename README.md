@@ -56,7 +56,7 @@ Si un capteur est mal détecté, ouvrez la carte en modification : l'**éditeur 
 | Style du tableau de bord | Nouveau (v2.7) ou Classique (v2) |
 | Capteurs principaux | solaire, réseau, borne voiture, niveau et autonomie voiture, ballon ECS |
 | Météo, température, prévisions | entité météo, température de la maison, Solcast aujourd'hui / demain |
-| Batteries | jusqu'à 4 batteries : nom, niveau, puissance, température, réglages mini / maxi ; marque affichée (automatique, Isypower, Izypower, Zendure ou sans marque) |
+| Batteries | jusqu'à 4 batteries : nom, niveau, puissance, température, **capacité (kWh)**, réglages mini / maxi ; marque affichée (automatique, Isypower, Izypower, Zendure ou sans marque) |
 | Éléments affichés | voiture, ballon, chauffage, volets, portail, garage, rappels, Watt… |
 | Tarifs et heures creuses | prix HP / HC, plages d'heures creuses |
 | Tuile chauffe-eau | sondes haute / basse, grande chauffe, désinfection |
@@ -92,9 +92,10 @@ batteries:                # 4 maximum
     min: number.titan_soc_mini                  # réglage du mini
     max: number.titan_soc_maxi                  # réglage du maxi
     invert: false                               # charge/décharge à l'envers
+    capacity: 6.132                             # capacité en kWh (à additionner) : Titan seul 2,1 · Link 2,1 · nouveau Link 4,032 · Zendure AB1000 0,96 · AB2000 1,92
 brand: isypower           # marque affichée : isypower, izypower, zendure, none (absent = automatique)
 packs: [1, 1]             # packs par batterie
-kwh_pack: 4.02            # capacité d'un pack (kWh)
+kwh_pack: 2.1             # capacité d'un pack (kWh), pour les batteries sans « capacity » (défaut : 2,1 = Titan seul)
 invert_bat: false
 modules:                  # valeurs par défaut ci-dessous
   voiture: true
@@ -163,6 +164,8 @@ Pour les questions libres, il utilise l'assistant de conversation de Home Assist
 Vos réglages enregistrés dans le navigateur (thème, rappels, seuils, Watt) sont conservés.
 
 ## Questions fréquentes
+
+- **Le stock en kWh est faux** : indiquez la **Capacité (kWh)** de chaque batterie dans la rubrique Batteries, en additionnant ses éléments : Isypower/Izypower Titan seul 2,1 · Link 2,1 · nouveau Link 4,032 ; Zendure AB1000 0,96 · AB2000 1,92. Exemple : Titan + nouveau Link = 6,132.
 
 - **La carte n'apparaît pas / « Custom element doesn't exist »** : videz le cache du navigateur (Ctrl + F5). Dans l'application mobile : Paramètres › Compagnon › Débogage › Réinitialiser le cache du frontend.
 - **Une batterie affiche « -- »** : vérifiez ses capteurs dans la rubrique Batteries. Le bouton **Statut** de la vue Réacteur liste les capteurs hors ligne.
