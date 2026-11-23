@@ -131,7 +131,9 @@ aspect_ratio: 16/9        # ou 56% (comme l'ancienne iframe)
 height: calc(100vh - 56px)  # hauteur fixe (prioritaire)
 ```
 
-Un exemple réel complet se trouve dans [`examples/config-biwaire.yaml`](examples/config-biwaire.yaml).
+Exemples complets :
+- Isypower / Izypower Titan : [`examples/config-biwaire.yaml`](examples/config-biwaire.yaml)
+- Zendure (SolarFlow, Hyper…) : [`examples/config-zendure.yaml`](examples/config-zendure.yaml)
 </details>
 
 ## Changer de vue en glissant (téléphone, tablette)
