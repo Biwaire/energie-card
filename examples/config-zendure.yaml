@@ -1,0 +1,17 @@
+# Exemple pour batteries Zendure (SolarFlow, Hyper…), à coller dans l'éditeur YAML de la carte.
+# Les identifiants ci-dessous sont des exemples : remplacez-les par les vôtres
+# (Outils de développement › États, tapez « electric_level » puis « bat_in_out »).
+# Astuce : laissez la carte tout détecter seule, et n'ajoutez ici que ce qui est mal reconnu.
+type: custom:energie-card
+brand: zendure                 # titre de la tuile : « Zendure · entrée / sortie »
+batteries:
+  - name: SolarFlow 2400
+    level: sensor.solarflow_2400_ac_electric_level      # niveau (%)
+    power: sensor.solarflow_2400_ac_bat_in_out          # puissance charge/décharge (W)
+    capacity: 3.84                                      # kWh : 2 × AB2000 (1,92)
+  - name: Hyper 2000
+    level: sensor.hyper_2000_electric_level
+    power: sensor.hyper_2000_bat_in_out
+    capacity: 2.88                                      # kWh : AB2000 (1,92) + AB1000 (0,96)
+# Le sens charge/décharge des capteurs « bat_in_out » est géré automatiquement.
+# S'il est quand même à l'envers chez vous, ajoutez « invert: true » sous la batterie concernée.
