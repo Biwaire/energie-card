@@ -7,6 +7,8 @@ Un tableau de bord énergie complet, en **une seule carte** : production solaire
 
 Deux vues au choix : **⚡ Énergie** (poste de supervision) et **⚛ Réacteur** (salle des machines animée).
 
+Et deux **styles** : **Nouveau** (réacteur sombre et net, barre de navigation) ou **Classique** (salle des machines claire, version d'origine). Le choix se fait dans l'éditeur de la carte.
+
 ![Vue Énergie](images/energie.jpg)
 ![Vue Réacteur](images/reacteur.jpg)
 
@@ -26,8 +28,8 @@ HACS ajoute tout seul la ressource. Les mises à jour arriveront ensuite dans HA
 
 ### Installation manuelle
 
-1. Téléchargez `energie-card.js` depuis la [dernière version](https://github.com/Biwaire/energie-card/releases).
-2. Copiez-le dans `/config/www/`.
+1. Téléchargez `energie-card.js` **et** `energie-card-classic.js` (dossier `dist`).
+2. Copiez-les tous les deux dans `/config/www/`. Seul `energie-card.js` s'ajoute comme ressource.
 3. **Paramètres › Tableaux de bord › ⋮ › Ressources › Ajouter** : URL `/local/energie-card.js?v=1`, type **Module JavaScript**.
 4. Rechargez la page. Après chaque mise à jour, passez à `?v=2`, `?v=3`…
 
@@ -46,6 +48,7 @@ Si un capteur est mal détecté, ouvrez la carte en modification : l'**éditeur 
 
 | Rubrique | Ce qu'on y règle |
 |---|---|
+| Style du tableau de bord | Nouveau (v2.7) ou Classique (v2) |
 | Capteurs principaux | solaire, réseau, borne voiture, niveau et autonomie voiture, ballon ECS |
 | Météo, température, prévisions | entité météo, température de la maison, Solcast aujourd'hui / demain |
 | Batteries | jusqu'à 4 batteries : nom, niveau, puissance, température, réglages mini / maxi |
@@ -61,6 +64,7 @@ Un champ laissé vide = détection automatique.
 
 ```yaml
 type: custom:energie-card
+style: classic            # Classique (v2) ; absent = Nouveau (v2.7)
 entities:                 # '' ou absent = détection automatique
   pv: sensor.puissance_solaire        # W
   grid: sensor.puissance_reseau       # W, positif = soutirage
@@ -164,10 +168,14 @@ Vos réglages enregistrés dans le navigateur (thème, rappels, seuils, Watt) so
 
 ## Pour les contributeurs
 
-Le tableau de bord se modifie dans `src/energie.html` (fichier unique, comme avant). La carte est générée automatiquement :
+Les tableaux de bord se modifient en HTML, comme avant :
+- `src/energie.html` : style **Nouveau** → `dist/energie-card.js` (carte principale)
+- `src/energie-classic.html` : style **Classique** → `dist/energie-card-classic.js` (chargé seulement si ce style est choisi)
+
+La carte est générée automatiquement :
 
 ```bash
-npm run build     # src/energie.html → dist/energie-card.js
+npm run build
 ```
 
 Committez `src/` **et** `dist/`. Ensuite, publiez une *release* GitHub (ex. `v1.0.1`) : HACS proposera la mise à jour à tout le monde. Pensez à augmenter `version` dans `package.json`.
