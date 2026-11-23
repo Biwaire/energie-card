@@ -52,7 +52,7 @@ Si un capteur est mal détecté, ouvrez la carte en modification : l'**éditeur 
 | Éléments affichés | voiture, ballon, chauffage, volets, portail, garage, rappels, Watt… |
 | Tarifs et heures creuses | prix HP / HC, plages d'heures creuses |
 | Tuile chauffe-eau | sondes haute / basse, grande chauffe, désinfection |
-| Avancé | puissance crête, capacité voiture, assistant de conversation pour Watt, adaptation à la hauteur de l'écran, taille de la carte |
+| Avancé | puissance crête, capacité voiture, assistant de conversation pour Watt, adaptation à la hauteur de l'écran, bouton plein écran, taille de la carte |
 
 Un champ laissé vide = détection automatique.
 
@@ -113,6 +113,8 @@ ev_kwh: 60                # capacité utile voiture
 ev_target: 80             # % visé
 agent: conversation.google_generative_ai   # '' = assistant par défaut
 fit_screen: true          # la carte tient dans la hauteur de l'écran (false = pleine largeur, défilement)
+fullscreen_button: true   # bouton plein écran ⛶
+fullscreen_landscape: true  # passer en paysage en plein écran (Android)
 aspect_ratio: 16/9        # ou 56% (comme l'ancienne iframe)
 height: calc(100vh - 56px)  # hauteur fixe (prioritaire)
 ```
@@ -120,9 +122,17 @@ height: calc(100vh - 56px)  # hauteur fixe (prioritaire)
 Un exemple réel complet se trouve dans [`examples/config-biwaire.yaml`](examples/config-biwaire.yaml).
 </details>
 
+## Plein écran
+
+Le bouton **⛶** (en bas à gauche) met la carte en plein écran ; un nouvel appui revient à l'affichage normal.
+- **Android (navigateur) et ordinateur** : vrai plein écran, sans les barres, et passage en paysage quand c'est possible.
+- **iPhone**, ou si l'application refuse le vrai plein écran : la carte couvre tout l'écran de l'application.
+
+En vue Réacteur, un double-clic sur l'horloge met aussi en plein écran.
+
 ## Boutons déplaçables
 
-Les boutons **⚡ Énergie / ⚛ Réacteur** et **🎨** se déplacent : appuyez dessus et faites-les glisser où vous voulez. Un simple appui garde leur action habituelle. La position est mémorisée sur chaque appareil, séparément pour le téléphone en portrait et pour les écrans larges.
+Les boutons **⚡ Énergie / ⚛ Réacteur**, **🎨** et **⛶** se déplacent : appuyez dessus et faites-les glisser où vous voulez. Un simple appui garde leur action habituelle. La position est mémorisée sur chaque appareil, séparément pour le téléphone en portrait et pour les écrans larges.
 
 ## Watt 👷 et l'assistant IA
 
