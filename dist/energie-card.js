@@ -28,7 +28,7 @@
 */
 /*
  ╔══════════════════════════════════════════════════════════════════════╗
- ║  ENERGIE-CARD 1.2.5 — carte Lovelace (custom:energie-card)            ║
+ ║  ENERGIE-CARD 1.2.6 — carte Lovelace (custom:energie-card)            ║
  ╚══════════════════════════════════════════════════════════════════════╝
  Installation : HACS (dépôt personnalisé, type « Tableau de bord ») ou manuelle (voir README).
  Configuration : éditeur visuel de la carte. Sans réglage, les capteurs sont détectés automatiquement.
@@ -36,7 +36,7 @@
 */
 (() => {
 'use strict';
-const TAG = 'energie-card', VERSION = '1.2.5';
+const TAG = 'energie-card', VERSION = '1.2.6';
 if (customElements.get(TAG)) return;
 console.info('%c ENERGIE-CARD %c ' + VERSION + ' ', 'color:#05080f;background:#2dff8a;font-weight:700', 'color:#2dff8a;background:#05080f');
 
@@ -241,13 +241,13 @@ function autoDetect(st){if(!st)return;const ids=Object.keys(st),has=id=>id&&st[i
  if(!UN.some(u=>has(u.lvl))){const found=[];
   const lvAll=sens.filter(i=>un(i)==='%'&&/electric_level|battery|batterie|soc|state_of_charge|niveau|pile_average/.test(tx(i))&&!/phone|telephone|tablet|tablette|voiture|car_|_ev|watch|mobile|iphone|pixel|samsung|remote|ups/.test(tx(i))&&!/min_?soc|max_?soc|soc_?set|soc_?min|soc_?max|soc_?limit|soc_?target|target|limit|reserve|health|soh|cycle|status|state$/.test(i.replace(/^sensor\./,'')));const lvPile=lvAll.filter(i=>/pile_average/.test(i));
   (lvPile.length?lvPile:lvAll).forEach(i=>{
-   const pre=i.replace(/(electric_level|battery_level|battery|state_of_charge|soc|niveau|pile_average)[a-z_0-9]*$/,'');if(pre.length<10||found.some(f=>f._pre===pre))return;const __bio=sens.some(k=>k.startsWith(pre)&&isW(k)&&/bat_in_out/.test(k));const zin=__bio?null:pick(sens.filter(k=>k.startsWith(pre)&&isW(k)&&/output_pack_power|pack_?charge_?power|battery_?charge_?power/.test(k)),()=>1),zout=__bio?null:pick(sens.filter(k=>k.startsWith(pre)&&isW(k)&&/pack_input_power|pack_?discharge_?power|battery_?discharge_?power/.test(k)),()=>1);
+   const pre=i.replace(/(electric_level|battery_level|battery|state_of_charge|soc|niveau|pile_average)[a-z_0-9]*$/,'');if(pre.length<10||found.some(f=>f._pre===pre)||['charger_type','battery_state','battery_health','is_charging','charging'].some(x=>st[pre+x]&&st[pre+x].state!==undefined&&isNaN(parseFloat(st[pre+x].state))))return;const __bio=sens.some(k=>k.startsWith(pre)&&isW(k)&&/bat_in_out/.test(k));const zin=__bio?null:pick(sens.filter(k=>k.startsWith(pre)&&isW(k)&&/output_pack_power|pack_?charge_?power|battery_?charge_?power/.test(k)),()=>1),zout=__bio?null:pick(sens.filter(k=>k.startsWith(pre)&&isW(k)&&/pack_input_power|pack_?discharge_?power|battery_?discharge_?power/.test(k)),()=>1);
    const pw=(zin||zout)?'':pick(sens.filter(k=>k.startsWith(pre)&&isW(k)),(k,t)=>/max|limit|rated|nominal|target|setpoint|total|today|energy|solar_?input|solar_?power|pv_?power|_pv|panel|home|grid|reseau|house|maison|inverse|mppt/.test(k)?0:/ac_input_and_output/.test(k)?5:/bat_in_out|battery_power|pack_?power|bat_?power/.test(k)?3:/puissance|power|in_out/.test(k)?1:0);if(!pw&&!zin&&!zout)return;
    const tp=pick(sens.filter(k=>k.startsWith(pre)&&un(k)==='°C'),(k,t)=>/tmp|temp/.test(k)?1:0);
    const nm=(at(i).friendly_name||i).replace(/\b(electric level|battery level|battery|niveau|state of charge|soc|level)\b/ig,'').replace(/\s+/g,' ').trim()||'Batterie';
-   found.push({id:'b'+found.length,_pre:pre,name:nm,lvl:i,pw,pin:zin||'',pout:zout||'',tmp:tp||'sensor.aucun',k:(/bat_in_out/.test(pw)?-1:1)*(INVERT_BAT?-1:1)})});
-  if(found.length>1){const w=found.map(f=>f.name.split(' '));let n=0;while(w.every(x=>x.length>n+1&&x[n]===w[0][n]))n++;if(n)found.forEach((f,i)=>f.name=w[i].slice(n).join(' '))}
-  found.forEach((f,i)=>{f.name=/pile_average/.test(f.lvl)?'Titan '+(i+1):f.name.slice(0,14)})
+   found.push({id:'b'+found.length,_pre:pre,_sc:(/pile_average/.test(i)||/ac_input_and_output|bat_in_out/.test(pw||'')?5:(zin||zout)?4:/battery_power|pack_?power|bat_?power|battery_?(charge|discharge)/.test(pw||'')?3:1),name:nm,lvl:i,pw,pin:zin||'',pout:zout||'',tmp:tp||'sensor.aucun',k:(/bat_in_out/.test(pw)?-1:1)*(INVERT_BAT?-1:1)})});
+  found.sort((a,b)=>(b._sc||0)-(a._sc||0));found.forEach((f,i)=>f.id='b'+i);if(found.length>1){const w=found.map(f=>f.name.split(' '));let n=0;while(w.every(x=>x.length>n+1&&x[n]===w[0][n]))n++;if(n)found.forEach((f,i)=>f.name=w[i].slice(n).join(' '))}
+  const __on=found.map(g=>g.name);found.forEach((f,i)=>{if(/pile_average/.test(f.lvl)){f.name='Titan '+(i+1);return}const c=f.name.slice(0,14);if(__on.some((g,j)=>j!==i&&g.slice(0,14)===c)){const w=f.name.split(' ');f.name=(w.length>1?w[0]+' '+w[w.length-1]:f.name).slice(0,17);return}f.name=c})
   if(found.length){UN.length=0;found.slice(0,4).forEach(f=>UN.push(f));DET.batteries=found.length}}else DET.batteries=UN.length;
  UN.forEach(u=>{if(u.k===undefined)u.k=-1})}
 autoDetect((getHass()||{}).states);
