@@ -104,6 +104,23 @@ code = code.replace(/(?<![.\w$'"])(WATT_(?:ACT|INSTR|CTX2|APPS|PARSE))\(/g, 'win
 // dimensions de la « fenêtre » = dimensions de la carte
 code = code.replace(/(?<![.\w$'"])(innerWidth|innerHeight)(?![\w$])/g, 'window.$1');
 
+// marques : titre de tuile selon les batteries détectées (Izypower / Zendure / Batteries), Watt neutre
+{
+  const T = 'Izypower · entrée / sortie';
+  const n = html.reduce((k, h) => k + h.split(T).length - 1, 0);
+  if (n !== 1) FAILS.push(`retouche « tuile marque » : ${n} occurrence(s) au lieu de 1`);
+  for (let i = 0; i < html.length; i++) html[i] = html[i].split(T).join('<span class="zbrand">Batteries</span> · entrée / sortie');
+}
+code = code.split('batteries Izypower Titan, voiture').join('batteries domestiques, voiture');
+code = code.split('izypower|isypower|titan').join('izypower|isypower|titan|zendure|solarflow');
+code += `
+;/* marque affichée selon les batteries détectées */
+(function(){var last='',FIX={isypower:'Isypower',izypower:'Izypower',zendure:'Zendure',none:'Batteries'};function upd(){try{var ids=UN.map(function(u){return String(u.lvl||'')+' '+String(u.pw||'')}).join(' ').toLowerCase();
+ var b=FIX[__C.brand]||(/isypower/.test(ids)?'Isypower':/pile_average|izypower|titan/.test(ids)?'Izypower':/electric_level|bat_in_out|zendure|solarflow|hyper_?2000|hub_?2000|ace_?1500|aio/.test(ids)?'Zendure':'Batteries');
+ if(b!==last){last=b;document.querySelectorAll('.zbrand').forEach(function(e){e.textContent=b})}}catch(e){}}
+ upd();setInterval(upd,3000)})();
+`;
+
 if (FAILS.length) throw new Error(SRC + ' :\n' + FAILS.join('\n'));
 const header = comments.map(c => '/*' + c.replace(/\*\//g, '* /') + '*/').join('\n');
 const dash = '{\nSTYLES: [\n' + stylesOut.map(s => `{id:${J(s.id)},css:${J(s.css)}}`).join(',\n') + '\n],\nHTML: [\n' + html.map(J).join(',\n') +

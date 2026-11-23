@@ -46,6 +46,9 @@ const BASE_CSS = `/* la carte ne doit rien hériter de la typographie de Home As
 :host(.pfs){position:relative;z-index:2147483000}
 .zh.pfs{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;height:100dvh!important;max-height:none!important;aspect-ratio:auto!important;border-radius:0!important;z-index:2147483000}
 #fsbtn{left:8px;bottom:8px}
+#vdots{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);z-index:60;display:flex;gap:10px;padding:6px 10px;border-radius:12px;background:rgba(5,8,15,.45)}
+#vdots i{display:block;width:9px;height:9px;border-radius:50%;background:rgba(160,200,255,.35);cursor:pointer}
+#vdots i.on{background:#4de1ff;box-shadow:0 0 6px #4de1ff}
 #fsbtn svg{width:20px;height:20px;pointer-events:none}`;
 
 function rwCss(css) {
@@ -259,6 +262,7 @@ class EnergieCard extends HTMLElement {
     } catch (e) { fail(e); }
     // boutons flottants déplaçables (position mémorisée sur cet appareil)
     this._fullscreen(zh, root, run);
+    this._swipe(root, zh, zb);
     run.drag = ['vsw', 'thbtn', 'fsbtn'].map(id => this._draggable(root.getElementById(id), zh, id, run)).filter(Boolean);
   }
 
@@ -302,6 +306,52 @@ class EnergieCard extends HTMLElement {
     const onKey = e => { if (e.key === 'Escape' && zh.classList.contains('pfs')) pseudo(false); };
     D.addEventListener('keydown', onKey); run.listeners.push([D, 'keydown', onKey]);
     upd();
+  }
+
+  /* écran tactile : glisser horizontalement sur le tableau pour passer d'une vue à l'autre */
+  _swipe(root, zh, zb) {
+    if (this._config.swipe === false) return;
+    const SKIP = 'input,textarea,select,canvas,[contenteditable],#vsw,#thbtn,#fsbtn,#hamb,#wbtn,#vdots';
+    const OPEN = '#panel.on,#menu.on,#hist.on,#cfm.on,#hmenu.on';
+    const scrollsX = el => {
+      for (let e = el; e && e !== zh; e = e.parentElement) {
+        const cs = getComputedStyle(e);
+        if (/(auto|scroll)/.test(cs.overflowX) && e.scrollWidth > e.clientWidth + 2) return true;
+      }
+      return false;
+    };
+    let g = null;
+    zh.addEventListener('touchstart', e => {
+      g = null;
+      if (e.touches.length !== 1) return;
+      const t = e.touches[0], target = e.composedPath()[0];
+      if (!(target instanceof Element) || target.closest(SKIP) || root.querySelector(OPEN) || scrollsX(target)) return;
+      g = { x: t.clientX, y: t.clientY, t: Date.now() };
+    }, { passive: true });
+    zh.addEventListener('touchmove', e => { if (g && e.touches.length !== 1) g = null; }, { passive: true });
+    // écran tactile : le bouton Énergie/Réacteur laisse place à deux petits points (● ○) qui indiquent la vue
+    const touchOnly = window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches;
+    if (touchOnly) {
+      const vsw = root.getElementById('vsw');
+      if (vsw) vsw.style.setProperty('display', 'none', 'important');
+      const dots = document.createElement('div'); dots.id = 'vdots';
+      dots.innerHTML = '<i data-v="0"></i><i data-v="1"></i>';
+      zh.appendChild(dots);
+      const upd = () => { const l = zb.classList.contains('lum'); dots.children[0].classList.toggle('on', !l); dots.children[1].classList.toggle('on', l); };
+      dots.addEventListener('click', e => { const v = e.target.dataset && e.target.dataset.v; const b = v && root.querySelector('#vsw button[data-v="' + v + '"]'); if (b) b.click(); });
+      new MutationObserver(upd).observe(zb, { attributes: true, attributeFilter: ['class'] });
+      upd();
+    }
+    zh.addEventListener('touchend', e => {
+      if (!g) return;
+      const t = e.changedTouches[0], dx = t.clientX - g.x, dy = t.clientY - g.y, dt = Date.now() - g.t; g = null;
+      const min = Math.max(60, zh.clientWidth * 0.12);
+      if (dt > 800 || Math.abs(dx) < min || Math.abs(dx) < 2 * Math.abs(dy)) return;
+      const lum = zb.classList.contains('lum');
+      const v = dx < 0 && !lum ? '1' : dx > 0 && lum ? '0' : null;      // ← Réacteur · → Énergie
+      const b = v && root.querySelector('#vsw button[data-v="' + v + '"]');
+      if (b) b.click();
+    }, { passive: true });
   }
 
   /* glisser-déposer d'un bouton flottant ; un simple appui garde son action habituelle */
@@ -369,7 +419,7 @@ class EnergieCard extends HTMLElement {
 customElements.define(TAG, EnergieCard);
 /*@@EDITOR@@*/
 window.customCards = window.customCards || [];
-window.customCards.push({ type: TAG, name: 'Énergie — réacteur (Izypower Titan)',
-  description: 'Tableau de bord énergie : solaire, réseau, batteries Izypower Titan, voiture, ballon ECS, Watt.', preview: false,
+window.customCards.push({ type: TAG, name: 'Énergie Réacteur (Isypower, Zendure)',
+  description: 'Tableau de bord énergie : solaire, réseau, batteries Isypower (Izypower) Titan ou Zendure, voiture, ballon ECS, Watt.', preview: false,
   documentationURL: 'https://github.com/@@REPO@@' });
 })();

@@ -2,9 +2,11 @@
 const ENT = (domain, extra) => ({ entity: Object.assign({ domain }, extra || {}) });
 const SENSOR = ENT('sensor');
 const LABELS = {
+  brand: 'Marque affichée',
   style: 'Style du tableau de bord',
   fit_screen: 'Adapter à la hauteur de l’écran',
   fullscreen_button: 'Bouton plein écran',
+  swipe: 'Changer de vue en glissant le doigt',
   aspect_ratio: 'Proportions (ex. 16/9 ou 56%)', height: 'Hauteur fixe (ex. calc(100vh - 56px))',
   pv: 'Puissance solaire (W)', grid: 'Puissance réseau (W, + = soutirage)', ev: 'Puissance borne voiture (W)',
   evSoc: 'Niveau batterie voiture (%)', evRange: 'Autonomie voiture (km)', evLid: 'Trappe de charge',
@@ -22,6 +24,7 @@ const LABELS = {
   ev_target: 'Charge visée voiture (%)', co2_kg_kwh: 'CO₂ du réseau (kg/kWh)', agent: 'Assistant de conversation pour Watt',
 };
 const HELPERS = {
+  brand: 'Automatique : selon les batteries détectées',
   style: 'Nouveau : vue Réacteur sombre et nette. Classique : salle des machines claire (version d’origine).',
   hc_text: 'Une ou plusieurs plages, ex. 22:00-06:00 ou 01:04-06:34, 14:34-17:04',
   packs_text: 'Dans l’ordre des batteries, ex. 1, 2',
@@ -46,6 +49,9 @@ const SCHEMA = [
     { name: 'weather', selector: ENT('weather') }, { name: 'house_temp', selector: SENSOR },
     { type: 'expandable', name: 'solcast', title: 'Solcast', schema: [{ name: 'today', selector: SENSOR }, { name: 'tomorrow', selector: SENSOR }] }] },
   { type: 'expandable', name: '', flatten: true, title: 'Batteries (4 maximum)', icon: 'mdi:home-battery', schema: [
+    { name: 'brand', selector: { select: { mode: 'dropdown', options: [
+      { value: 'auto', label: 'Automatique' }, { value: 'isypower', label: 'Isypower' }, { value: 'izypower', label: 'Izypower' },
+      { value: 'zendure', label: 'Zendure' }, { value: 'none', label: 'Batteries (sans marque)' }] } } },
     bat(1), bat(2), bat(3), bat(4),
     { type: 'grid', name: '', schema: [{ name: 'packs_text', selector: { text: {} } }, { name: 'kwh_pack', selector: NUM(0.01, 'kWh') }] },
     { name: 'invert_bat', selector: { boolean: {} } }] },
@@ -64,6 +70,7 @@ const SCHEMA = [
     { name: 'invert_grid', selector: { boolean: {} } },
     { name: 'fit_screen', selector: { boolean: {} } },
     { name: 'fullscreen_button', selector: { boolean: {} } },
+    { name: 'swipe', selector: { boolean: {} } },
     { name: 'agent', selector: { conversation_agent: {} } },
     { type: 'grid', name: '', schema: [{ name: 'aspect_ratio', selector: { text: {} } }, { name: 'height', selector: { text: {} } }] }] },
 ];
@@ -73,8 +80,10 @@ const MOD_DEFAULTS = { portail: false, garage: false, volets: false, chauffage: 
 function toForm(c) {
   const d = Object.assign({}, c);
   d.style = c.style === 'classic' ? 'classic' : 'new';
+  d.brand = c.brand || 'auto';
   d.fit_screen = c.fit_screen !== false;
   d.fullscreen_button = c.fullscreen_button !== false;
+  d.swipe = c.swipe !== false;
   d.modules = Object.assign({}, MOD_DEFAULTS, c.modules || {});
   (c.batteries || []).slice(0, 4).forEach((b, i) => { d['bat' + (i + 1)] = Object.assign({}, b); });
   delete d.batteries;
@@ -109,7 +118,8 @@ function fromForm(d, type) {
       return;
     }
     if (k === 'style') { if (d[k] === 'classic') c.style = 'classic'; return; }
-    if (k === 'fit_screen' || k === 'fullscreen_button') { if (d[k] === false) c[k] = false; return; }
+    if (k === 'brand') { if (d[k] && d[k] !== 'auto') c.brand = d[k]; return; }
+    if (k === 'fit_screen' || k === 'fullscreen_button' || k === 'swipe') { if (d[k] === false) c[k] = false; return; }
     if (k !== 'type') c[k] = d[k];
   });
   const list = bats.filter(Boolean);
@@ -138,7 +148,7 @@ class EnergieCardEditor extends HTMLElement {
       if (this._form) return;
       const intro = document.createElement('div');
       intro.style.cssText = 'padding:4px 0 12px;color:var(--secondary-text-color);font-size:14px;line-height:1.4';
-      intro.textContent = 'Les champs laissés vides sont détectés automatiquement (solaire, réseau, batteries Izypower, Solcast, météo…). Renseignez seulement ce qui est mal détecté.';
+      intro.textContent = 'Les champs laissés vides sont détectés automatiquement (solaire, réseau, batteries Isypower ou Zendure, Solcast, météo…). Renseignez seulement ce qui est mal détecté.';
       this.appendChild(intro);
       this._form = document.createElement('ha-form');
       this._form.schema = SCHEMA;
