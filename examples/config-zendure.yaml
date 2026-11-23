@@ -13,5 +13,12 @@ batteries:
     level: sensor.hyper_2000_electric_level
     power: sensor.hyper_2000_bat_in_out
     capacity: 2.88                                      # kWh : AB2000 (1,92) + AB1000 (0,96)
+  # Appareil avec deux capteurs séparés (charge / décharge), par ex. intégration Zendure officielle :
+  - name: SolarFlow 800
+    level: sensor.solarflow_800_electric_level
+    power_in: sensor.solarflow_800_output_pack_power    # charge de la batterie (W)
+    power_out: sensor.solarflow_800_pack_input_power    # décharge de la batterie (W)
+    min: number.solarflow_800_min_soc
+    max: number.solarflow_800_soc_set
 # Le sens charge/décharge des capteurs « bat_in_out » est géré automatiquement.
 # S'il est quand même à l'envers chez vous, ajoutez « invert: true » sous la batterie concernée.
