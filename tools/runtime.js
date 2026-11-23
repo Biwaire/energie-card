@@ -21,7 +21,8 @@ const SCOPED = new Set(['click','dblclick','auxclick','contextmenu','mousedown',
   'pointerdown','pointerup','pointermove','pointercancel','pointerover','pointerout','touchstart','touchend','touchmove',
   'touchcancel','keydown','keyup','keypress','input','change','wheel','focusin','focusout','beforeinput']);
 
-const BASE_CSS = `:host{display:block}
+const BASE_CSS = `/* la carte ne doit rien hériter de la typographie de Home Assistant (comme une iframe) */
+:host{all:initial;display:block;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .zh{position:relative;display:block;width:100%;aspect-ratio:16/9;overflow:hidden;contain:layout paint style;container-type:inline-size;container-name:zh;transform:translateZ(0);border-radius:var(--ha-card-border-radius,12px)}
 .zh.fit{max-height:calc(100dvh - var(--header-height, 56px) - var(--energie-card-offset, 16px))}
 .zh:fullscreen{border-radius:0;max-height:none}
