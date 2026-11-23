@@ -28,7 +28,7 @@
 */
 /*
  ╔══════════════════════════════════════════════════════════════════════╗
- ║  ENERGIE-CARD 1.0.2 — carte Lovelace (custom:energie-card)            ║
+ ║  ENERGIE-CARD 1.0.3 — carte Lovelace (custom:energie-card)            ║
  ╚══════════════════════════════════════════════════════════════════════╝
  Installation : HACS (dépôt personnalisé, type « Tableau de bord ») ou manuelle (voir README).
  Configuration : éditeur visuel de la carte. Sans réglage, les capteurs sont détectés automatiquement.
@@ -36,7 +36,7 @@
 */
 (() => {
 'use strict';
-const TAG = 'energie-card', VERSION = '1.0.2';
+const TAG = 'energie-card', VERSION = '1.0.3';
 if (customElements.get(TAG)) return;
 console.info('%c ENERGIE-CARD %c ' + VERSION + ' ', 'color:#05080f;background:#2dff8a;font-weight:700', 'color:#2dff8a;background:#05080f');
 
@@ -1941,13 +1941,63 @@ class EnergieCard extends HTMLElement {
         if (zh.style.height !== h) { zh.style.setProperty('height', h, 'important'); zh.style.setProperty('aspect-ratio', 'auto', 'important'); }
       } else if (run.phone) { run.phone = false; card._size(zh); }
     };
-    run.ro = new ResizeObserver(() => { layoutCtl(); run.resize.forEach(f => { try { f.call(winP, { type: 'resize' }); } catch (e) { fail(e); } }); });
+    run.ro = new ResizeObserver(() => { layoutCtl(); (run.drag || []).forEach(f => f()); run.resize.forEach(f => { try { f.call(winP, { type: 'resize' }); } catch (e) { fail(e); } }); });
     run.ro.observe(zh);
 
     const H = i => zb.insertAdjacentHTML('beforeend', HTML[i]);
     try {
       RUN(docP, winP, winP, W, W, sT, sI, cT, cI, rAF, cAF, addL, remL, con, H, card, card._config || {});
     } catch (e) { fail(e); }
+    // boutons flottants déplaçables (position mémorisée sur cet appareil)
+    run.drag = ['vsw', 'thbtn'].map(id => this._draggable(root.getElementById(id), zh, id, run)).filter(Boolean);
+  }
+
+  /* glisser-déposer d'un bouton flottant ; un simple appui garde son action habituelle */
+  _draggable(el, zh, key, run) {
+    if (!el) return null;
+    const K = 'energie-card:pos:' + key;
+    let saved = {}; try { saved = JSON.parse(localStorage.getItem(K)) || {}; } catch (e) {}
+    const lay = () => run.phone ? 'p' : 'l';            // téléphone (portrait) / écran large
+    const apply = () => {
+      const p = saved[lay()], st = el.style;
+      if (!p) { ['left', 'top', 'right', 'bottom'].forEach(k => st.removeProperty(k)); return; }
+      const w = zh.clientWidth, h = zh.clientHeight, ew = el.offsetWidth, eh = el.offsetHeight; if (!w || !h) return;
+      const x = Math.max(0, Math.min(w - ew, p.x * w)), y = Math.max(0, Math.min(h - eh, p.y * h));
+      st.setProperty('left', x + 'px', 'important'); st.setProperty('top', y + 'px', 'important');
+      st.setProperty('right', 'auto', 'important'); st.setProperty('bottom', 'auto', 'important');
+    };
+    el.style.touchAction = 'none';
+    let g = null;
+    el.addEventListener('pointerdown', e => {
+      if (e.button > 0) return;
+      const r = el.getBoundingClientRect(), z = zh.getBoundingClientRect();
+      g = { x: e.clientX, y: e.clientY, l: r.left - z.left, t: r.top - z.top, id: e.pointerId, moved: false };
+      window.addEventListener('pointermove', move, true);
+      window.addEventListener('pointerup', end, true); window.addEventListener('pointercancel', end, true);
+    });
+    const move = e => {
+      if (!g || e.pointerId !== g.id) return;
+      const dx = e.clientX - g.x, dy = e.clientY - g.y;
+      if (!g.moved) { if (Math.hypot(dx, dy) < 8) return; g.moved = true; el.style.cursor = 'grabbing'; }
+      e.preventDefault();
+      saved[lay()] = { x: (g.l + dx) / zh.clientWidth, y: (g.t + dy) / zh.clientHeight };
+      apply();
+    };
+    const end = () => {
+      window.removeEventListener('pointermove', move, true);
+      window.removeEventListener('pointerup', end, true); window.removeEventListener('pointercancel', end, true);
+      if (!g) return;
+      if (g.moved) {
+        el.style.cursor = '';
+        try { localStorage.setItem(K, JSON.stringify(saved)); } catch (e) {}
+        const stop = ev => { ev.stopPropagation(); ev.preventDefault(); };   // pas de changement de vue en fin de glissement
+        el.addEventListener('click', stop, { capture: true, once: true });
+        setTimeout(() => el.removeEventListener('click', stop, true), 400);
+      }
+      g = null;
+    };
+    apply();
+    return apply;
   }
 
   _teardown() {
