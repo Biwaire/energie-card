@@ -17,11 +17,24 @@ Et deux **styles** : **Nouveau** (réacteur sombre et net, barre de navigation) 
 ![Vue Énergie — style Classique](images/classique-energie.jpg)
 ![Vue Réacteur — style Classique](images/classique-reacteur.jpg)
 
+
 ---
 
 ## Installation
 
-### Avec HACS (recommandé)
+### Home Assistant 2026.11 et plus récent : Marketplace (recommandé)
+
+Depuis la version 2026.11, HACS est intégré à Home Assistant sous le nom **Marketplace**. Si vous aviez déjà installé la carte avec HACS, elle a été reprise automatiquement : rien à refaire.
+
+1. **Paramètres › Marketplace** (la première fois, acceptez l'avertissement).
+2. Bouton **Ajouter depuis un lien** (*Add from link*) et collez `https://github.com/Biwaire/energie-card`.
+   Home Assistant demande d'associer un compte GitHub (un code à saisir sur github.com) : c'est obligatoire pour les dépôts ajoutés à la main, et en lecture seule.
+3. Installez **Énergie Réacteur** : la ressource est ajoutée toute seule.
+4. Rechargez la page du navigateur (Ctrl + F5 sur ordinateur).
+
+Les mises à jour arrivent ensuite dans le Marketplace, comme pour les autres cartes.
+
+### Avant 2026.11 : avec HACS
 
 1. Ouvrez **HACS** dans Home Assistant.
 2. Menu **⋮** (en haut à droite) › **Dépôts personnalisés**.
@@ -29,12 +42,10 @@ Et deux **styles** : **Nouveau** (réacteur sombre et net, barre de navigation) 
 4. Cherchez **Énergie Réacteur**, ouvrez-la, puis **Télécharger**.
 5. Rechargez la page du navigateur (Ctrl + F5 sur ordinateur).
 
-HACS ajoute tout seul la ressource. Les mises à jour arriveront ensuite dans HACS comme pour les autres cartes.
-
 ### Installation manuelle
 
 1. Téléchargez `energie-card.js` **et** `energie-card-classic.js` (dossier `dist`).
-2. Copiez-les tous les deux dans `/config/www/`. Seul `energie-card.js` s'ajoute comme ressource.
+2. Copiez-les tous dans `/config/www/`. Seul `energie-card.js` s'ajoute comme ressource.
 3. **Paramètres › Tableaux de bord › ⋮ › Ressources › Ajouter** : URL `/local/energie-card.js?v=1`, type **Module JavaScript**.
 4. Rechargez la page. Après chaque mise à jour, passez à `?v=2`, `?v=3`…
 
@@ -200,8 +211,8 @@ La carte est générée automatiquement :
 npm run build
 ```
 
-Committez `src/` **et** `dist/`. Ensuite, publiez une *release* GitHub (ex. `v1.0.1`) : HACS proposera la mise à jour à tout le monde. Pensez à augmenter `version` dans `package.json`.
+Committez `src/` **et** `dist/`. Ensuite, publiez une *release* GitHub (ex. `v1.0.1`) : le Marketplace (ou HACS) proposera la mise à jour à tout le monde. Pensez à augmenter `version` dans `package.json`.
 
 ---
 
-*English: a single-card energy dashboard for Home Assistant (solar, grid, Izypower Titan batteries, EV, water heater, Solcast). Install through HACS as a custom "Dashboard" repository, add `type: custom:energie-card`, and set sensors in the visual editor (auto-detected by default). UI is in French.*
+*English: a single-card energy dashboard for Home Assistant (solar, grid, Izypower Titan batteries, EV, water heater, Solcast). Install through Settings › Marketplace › Add from link (Home Assistant 2026.11+) or as a HACS custom "Dashboard" repository, add `type: custom:energie-card`, and set sensors in the visual editor (auto-detected by default). UI is in French.*
