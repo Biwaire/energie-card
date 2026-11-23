@@ -2,6 +2,7 @@
 const ENT = (domain, extra) => ({ entity: Object.assign({ domain }, extra || {}) });
 const SENSOR = ENT('sensor');
 const LABELS = {
+  style: 'Style du tableau de bord',
   fit_screen: 'Adapter à la hauteur de l’écran',
   fullscreen_button: 'Bouton plein écran',
   aspect_ratio: 'Proportions (ex. 16/9 ou 56%)', height: 'Hauteur fixe (ex. calc(100vh - 56px))',
@@ -21,6 +22,7 @@ const LABELS = {
   ev_target: 'Charge visée voiture (%)', co2_kg_kwh: 'CO₂ du réseau (kg/kWh)', agent: 'Assistant de conversation pour Watt',
 };
 const HELPERS = {
+  style: 'Nouveau : vue Réacteur sombre et nette. Classique : salle des machines claire (version d’origine).',
   hc_text: 'Une ou plusieurs plages, ex. 22:00-06:00 ou 01:04-06:34, 14:34-17:04',
   packs_text: 'Dans l’ordre des batteries, ex. 1, 2',
   fit_screen: 'La carte entière reste visible sans défiler',
@@ -34,6 +36,8 @@ const bat = i => ({ type: 'expandable', name: 'bat' + i, title: 'Batterie ' + i,
   { name: 'invert', selector: { boolean: {} } }] });
 const NUM = (step, unit) => ({ number: { mode: 'box', step, unit_of_measurement: unit } });
 const SCHEMA = [
+  { name: 'style', selector: { select: { mode: 'dropdown', options: [
+    { value: 'new', label: 'Nouveau (v2.7)' }, { value: 'classic', label: 'Classique (v2)' }] } } },
   { type: 'expandable', name: 'entities', title: 'Capteurs principaux', icon: 'mdi:solar-power', schema: [
     { name: 'pv', selector: SENSOR }, { name: 'grid', selector: SENSOR }, { name: 'ev', selector: SENSOR },
     { name: 'evSoc', selector: SENSOR }, { name: 'evRange', selector: SENSOR }, { name: 'evLid', selector: { entity: {} } },
@@ -68,6 +72,7 @@ const MOD_DEFAULTS = { portail: false, garage: false, volets: false, chauffage: 
 /* config ⇄ données du formulaire */
 function toForm(c) {
   const d = Object.assign({}, c);
+  d.style = c.style === 'classic' ? 'classic' : 'new';
   d.fit_screen = c.fit_screen !== false;
   d.fullscreen_button = c.fullscreen_button !== false;
   d.modules = Object.assign({}, MOD_DEFAULTS, c.modules || {});
@@ -103,6 +108,7 @@ function fromForm(d, type) {
       if (Object.keys(m).length) c.modules = m;
       return;
     }
+    if (k === 'style') { if (d[k] === 'classic') c.style = 'classic'; return; }
     if (k === 'fit_screen' || k === 'fullscreen_button') { if (d[k] === false) c[k] = false; return; }
     if (k !== 'type') c[k] = d[k];
   });

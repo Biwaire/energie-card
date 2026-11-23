@@ -1,8 +1,15 @@
-// Construit energie-card.js (carte Lovelace personnalisée) à partir du fichier energie.html d'origine.
-// Usage : node build.mjs <energie.html> <sortie.js>
+// Construit la carte Lovelace à partir des tableaux de bord HTML d'origine.
+//   src/energie.html          → dist/energie-card.js          (style « Nouveau », carte principale)
+//   src/energie-classic.html  → dist/energie-card-classic.js  (style « Classique », chargé seulement s'il est choisi)
+// Usage : node tools/build.mjs            (les deux)
+//         node tools/build.mjs <html> <sortie.js>   (test d'un seul fichier comme carte principale)
 import fs from 'node:fs';
 
-const [, , SRC, OUT] = process.argv;
+const PKG = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+const VERSION = PKG.version;
+const J = s => JSON.stringify(s);
+
+function transform(SRC) {
 const src = fs.readFileSync(SRC, 'utf8').replace(/\r\n/g, '\n');
 
 /* ---------- 1. découpage du fichier ---------- */
@@ -91,26 +98,49 @@ if (!/if\(!M\.rappels\)hide\('[^']*#rxp/.test(code))   // déjà corrigé dans l
   patch("if(!M.rappels)hide('#rxbell,#rxm');", "if(!M.rappels)hide('#rxbell,#rxm,#rxp');", 'rappels masqués');
 patchRe(/function seed\(\)\{return\[[\s\S]*?\]\}/, "function seed(){return[\n{id:'car',t:'Voiture à charger',ic:'🔌',col:'#4de1ff',k:'car',thr:30}]}", 'rappels seed');
 
-if (FAILS.length) { console.error(FAILS.join('\n')); process.exit(1); }
 
 // appels « nus » à des fonctions posées sur window (window est propre à chaque carte)
 code = code.replace(/(?<![.\w$'"])(WATT_(?:ACT|INSTR|CTX2|APPS|PARSE))\(/g, 'window.$1(');
 // dimensions de la « fenêtre » = dimensions de la carte
 code = code.replace(/(?<![.\w$'"])(innerWidth|innerHeight)(?![\w$])/g, 'window.$1');
 
-/* ---------- 4. assemblage ---------- */
-const J = s => JSON.stringify(s);
+if (FAILS.length) throw new Error(SRC + ' :\n' + FAILS.join('\n'));
 const header = comments.map(c => '/*' + c.replace(/\*\//g, '* /') + '*/').join('\n');
+const dash = '{\nSTYLES: [\n' + stylesOut.map(s => `{id:${J(s.id)},css:${J(s.css)}}`).join(',\n') + '\n],\nHTML: [\n' + html.map(J).join(',\n') +
+  '\n],\nRUN: function (document, window, self, parent, top, setTimeout, setInterval, clearTimeout, clearInterval,\n' +
+  '             requestAnimationFrame, cancelAnimationFrame, addEventListener, removeEventListener, console,\n             __H, __card, __C) {\n' + code + '\n}\n}';
+return { header, dash, info: `${styles.length} feuilles de style, ${scripts.length} scripts, ${html.length} morceaux HTML` };
+}
+
+/* ---------- 4. assemblage ---------- */
 const tpl = fs.readFileSync(new URL('./runtime.js', import.meta.url), 'utf8');
-const PKG = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
-const VERSION = PKG.version;
-const out = tpl
-  .replace(/@@VERSION@@/g, VERSION)
-  .replace(/@@REPO@@/g, PKG.repository)
-  .replace('/*@@EDITOR@@*/', () => fs.readFileSync(new URL('./editor.js', import.meta.url), 'utf8'))
-  .replace('/*@@HEADER@@*/', () => header)
-  .replace('/*@@STYLES@@*/', () => '[\n' + stylesOut.map(s => `{id:${J(s.id)},css:${J(s.css)}}`).join(',\n') + '\n]')
-  .replace('/*@@HTML@@*/', () => '[\n' + html.map(J).join(',\n') + '\n]')
-  .replace('/*@@CODE@@*/', () => code);
-fs.writeFileSync(OUT, out);
-console.log(`OK : ${styles.length} feuilles de style, ${scripts.length} scripts, ${html.length} morceaux HTML → ${OUT} (${(out.length / 1024).toFixed(0)} Ko)`);
+function buildMain(SRC, OUT) {
+  const t = transform(SRC);
+  const out = tpl
+    .replace(/@@VERSION@@/g, VERSION)
+    .replace(/@@REPO@@/g, PKG.repository)
+    .replace('/*@@EDITOR@@*/', () => fs.readFileSync(new URL('./editor.js', import.meta.url), 'utf8'))
+    .replace('/*@@HEADER@@*/', () => t.header)
+    .replace('/*@@DASH@@*/', () => t.dash);
+  fs.writeFileSync(OUT, out);
+  console.log(`OK : ${t.info} → ${String(OUT).split("/").slice(-2).join("/")} (${(out.length / 1024).toFixed(0)} Ko)`);
+}
+function buildClassic(SRC, OUT) {
+  const t = transform(SRC);
+  const out = t.header + `
+/* Style « Classique » (v2) de la carte energie-card ${VERSION}.
+   Chargé automatiquement par energie-card.js quand le style Classique est choisi :
+   NE PAS l'ajouter comme ressource. */
+(window.__ENERGIE_CARD_DASH = window.__ENERGIE_CARD_DASH || {}).classic = ` + t.dash + ';\n';
+  fs.writeFileSync(OUT, out);
+  console.log(`OK : ${t.info} → ${String(OUT).split("/").slice(-2).join("/")} (${(out.length / 1024).toFixed(0)} Ko)`);
+}
+
+const [, , SRC, OUT] = process.argv;
+try {
+  if (SRC) buildMain(SRC, OUT);
+  else {
+    buildMain(new URL('../src/energie.html', import.meta.url), new URL('../dist/energie-card.js', import.meta.url));
+    buildClassic(new URL('../src/energie-classic.html', import.meta.url), new URL('../dist/energie-card-classic.js', import.meta.url));
+  }
+} catch (e) { console.error(e.message); process.exit(1); }

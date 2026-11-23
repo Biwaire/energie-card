@@ -13,8 +13,24 @@ const TAG = 'energie-card', VERSION = '@@VERSION@@';
 if (customElements.get(TAG)) return;
 console.info('%c ENERGIE-CARD %c ' + VERSION + ' ', 'color:#05080f;background:#2dff8a;font-weight:700', 'color:#2dff8a;background:#05080f');
 
-const STYLES = /*@@STYLES@@*/;
-const HTML = /*@@HTML@@*/;
+/* tableaux de bord disponibles : « new » est inclus, « classic » est chargé à la demande (fichier voisin) */
+const DASH = window.__ENERGIE_CARD_DASH = window.__ENERGIE_CARD_DASH || {};
+const STYLE_FILES = { classic: 'energie-card-classic.js' };
+const STYLE_NAMES = { new: 'Nouveau', classic: 'Classique' };
+const LOADS = {};
+let BASE_URL = '';
+try { BASE_URL = import.meta.url; } catch (e) {}
+function loadStyle(key) {
+  if (DASH[key]) return Promise.resolve(DASH[key]);
+  if (!LOADS[key]) {
+    const url = new URL(STYLE_FILES[key] + '?v=' + VERSION, BASE_URL || location.href).href;
+    LOADS[key] = import(url).then(() => {
+      if (!DASH[key]) throw new Error('style introuvable');
+      return DASH[key];
+    }).catch(e => { delete LOADS[key]; throw e; });
+  }
+  return LOADS[key];
+}
 
 /* événements d'interface : écoutés dans la carte, jamais sur toute la page Home Assistant */
 const SCOPED = new Set(['click','dblclick','auxclick','contextmenu','mousedown','mouseup','mousemove','mouseover','mouseout',
@@ -38,12 +54,8 @@ function rwCss(css) {
     .replace(/@media\s*\(\s*((?:max|min)-width)\s*:\s*([^)]+)\)\s*\{/g, '@container zh ($1:$2){');
 }
 
-/* ════════ code du tableau de bord d'origine (exécuté une fois par carte, dans son propre contexte) ════════ */
-function RUN(document, window, self, parent, top, setTimeout, setInterval, clearTimeout, clearInterval,
-             requestAnimationFrame, cancelAnimationFrame, addEventListener, removeEventListener, console,
-             __H, __card, __C) {
-/*@@CODE@@*/
-}
+/* ════════ style « Nouveau » : code du tableau de bord d'origine (exécuté une fois par carte, dans son propre contexte) ════════ */
+DASH.new = /*@@DASH@@*/;
 
 class EnergieCard extends HTMLElement {
   constructor() { super(); this._config = {}; this._hass = null; this._run = null; }
@@ -77,11 +89,29 @@ class EnergieCard extends HTMLElement {
   static getStubConfig() { return {}; }
   static getConfigElement() { return document.createElement(TAG + '-editor'); }
 
+  _styleKey() { return this._config.style === 'classic' ? 'classic' : 'new'; }
+
   _maybeStart(force) {
-    if (this._run || !this.isConnected) return;
+    if (this._run || this._loading || !this.isConnected) return;
     if (!this._hass && !force) return;
     clearTimeout(this._demoT);
-    this._start();
+    const key = this._styleKey();
+    if (DASH[key]) { this._start(); return; }
+    // style pas encore chargé : petit écran d'attente, puis démarrage
+    const root = this.shadowRoot || this.attachShadow({ mode: 'open' });
+    root.innerHTML = '<style>' + BASE_CSS + '.zh{display:flex;align-items:center;justify-content:center;background:#05080f;color:#8fb4d8;font:600 15px system-ui,sans-serif}</style><div class="zh">Chargement du style ' + STYLE_NAMES[key] + '…</div>';
+    this._size(root.querySelector('.zh'));
+    this._loading = true;
+    loadStyle(key).then(() => {
+      this._loading = false;
+      if (!this._run && this.isConnected && this._styleKey() === key) this._start();
+      else if (!this._run) this._maybeStart(true);
+    }).catch(e => {
+      this._loading = false;
+      const z = root.querySelector('.zh');
+      if (z) z.textContent = 'Style ' + STYLE_NAMES[key] + ' introuvable : le fichier ' + STYLE_FILES[key] + ' doit être à côté de energie-card.js (réinstallez la carte avec HACS).';
+      console.error('[energie-card]', e);
+    });
   }
 
   _size(zh) {
@@ -100,6 +130,7 @@ class EnergieCard extends HTMLElement {
 
   _start() {
     const card = this, W = window, D = document;
+    const { STYLES, HTML, RUN } = DASH[this._styleKey()];
     const root = this.shadowRoot || this.attachShadow({ mode: 'open' });
     root.innerHTML = '';
     const base = D.createElement('style'); base.textContent = BASE_CSS; root.appendChild(base);
