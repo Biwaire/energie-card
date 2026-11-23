@@ -3,6 +3,7 @@ const ENT = (domain, extra) => ({ entity: Object.assign({ domain }, extra || {})
 const SENSOR = ENT('sensor');
 const LABELS = {
   fit_screen: 'Adapter à la hauteur de l’écran',
+  fullscreen_button: 'Bouton plein écran',
   aspect_ratio: 'Proportions (ex. 16/9 ou 56%)', height: 'Hauteur fixe (ex. calc(100vh - 56px))',
   pv: 'Puissance solaire (W)', grid: 'Puissance réseau (W, + = soutirage)', ev: 'Puissance borne voiture (W)',
   evSoc: 'Niveau batterie voiture (%)', evRange: 'Autonomie voiture (km)', evLid: 'Trappe de charge',
@@ -58,6 +59,7 @@ const SCHEMA = [
       { name: 'ev_kwh', selector: NUM(1, 'kWh') }, { name: 'ev_target', selector: NUM(5, '%') }] },
     { name: 'invert_grid', selector: { boolean: {} } },
     { name: 'fit_screen', selector: { boolean: {} } },
+    { name: 'fullscreen_button', selector: { boolean: {} } },
     { name: 'agent', selector: { conversation_agent: {} } },
     { type: 'grid', name: '', schema: [{ name: 'aspect_ratio', selector: { text: {} } }, { name: 'height', selector: { text: {} } }] }] },
 ];
@@ -67,6 +69,7 @@ const MOD_DEFAULTS = { portail: false, garage: false, volets: false, chauffage: 
 function toForm(c) {
   const d = Object.assign({}, c);
   d.fit_screen = c.fit_screen !== false;
+  d.fullscreen_button = c.fullscreen_button !== false;
   d.modules = Object.assign({}, MOD_DEFAULTS, c.modules || {});
   (c.batteries || []).slice(0, 4).forEach((b, i) => { d['bat' + (i + 1)] = Object.assign({}, b); });
   delete d.batteries;
@@ -100,7 +103,7 @@ function fromForm(d, type) {
       if (Object.keys(m).length) c.modules = m;
       return;
     }
-    if (k === 'fit_screen') { if (d[k] === false) c.fit_screen = false; return; }
+    if (k === 'fit_screen' || k === 'fullscreen_button') { if (d[k] === false) c[k] = false; return; }
     if (k !== 'type') c[k] = d[k];
   });
   const list = bats.filter(Boolean);
