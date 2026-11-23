@@ -28,7 +28,7 @@
 */
 /*
  ╔══════════════════════════════════════════════════════════════════════╗
- ║  ENERGIE-CARD 1.2.2 — carte Lovelace (custom:energie-card)            ║
+ ║  ENERGIE-CARD 1.2.4 — carte Lovelace (custom:energie-card)            ║
  ╚══════════════════════════════════════════════════════════════════════╝
  Installation : HACS (dépôt personnalisé, type « Tableau de bord ») ou manuelle (voir README).
  Configuration : éditeur visuel de la carte. Sans réglage, les capteurs sont détectés automatiquement.
@@ -36,7 +36,7 @@
 */
 (() => {
 'use strict';
-const TAG = 'energie-card', VERSION = '1.2.2';
+const TAG = 'energie-card', VERSION = '1.2.4';
 if (customElements.get(TAG)) return;
 console.info('%c ENERGIE-CARD %c ' + VERSION + ' ', 'color:#05080f;background:#2dff8a;font-weight:700', 'color:#2dff8a;background:#05080f');
 
@@ -70,11 +70,13 @@ const BASE_CSS = `/* la carte ne doit rien hériter de la typographie de Home As
 .zh.fit{max-height:calc(100dvh - var(--header-height, 56px) - var(--energie-card-offset, 16px))}
 .zh:fullscreen{border-radius:0;max-height:none}
 .zhead{display:none}
+.zh.paused *,.zh.paused *::before,.zh.paused *::after{animation-play-state:paused!important}
 :host(.pfs){position:relative;z-index:2147483000}
 .zh.pfs{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;height:100dvh!important;max-height:none!important;aspect-ratio:auto!important;border-radius:0!important;z-index:2147483000}
 #fsbtn{left:8px;bottom:8px}
-#vdots{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);z-index:60;display:flex;gap:10px;padding:6px 10px;border-radius:12px;background:rgba(5,8,15,.45)}
-#vdots i{display:block;width:9px;height:9px;border-radius:50%;background:rgba(160,200,255,.35);cursor:pointer}
+/* points de vue : coin bas droit, à la verticale (ne cachent plus la barre de navigation) */
+#vdots{position:absolute;right:8px;bottom:8px;z-index:60;display:flex;flex-direction:column;gap:12px;padding:10px 8px;border-radius:12px;background:rgba(5,8,15,.55)}
+#vdots i{display:block;width:11px;height:11px;border-radius:50%;background:rgba(160,200,255,.35);cursor:pointer}
 #vdots i.on{background:#4de1ff;box-shadow:0 0 6px #4de1ff}
 #fsbtn svg{width:20px;height:20px;pointer-events:none}`;
 
@@ -179,7 +181,7 @@ const ECS_TILE=Object.assign({haute:'',basse:'',grande:'',desinf:''},__C.ecs_til
    INVERT_BAT  true si la charge/décharge est affichée à l'envers                          */
 const UN=[];
 const BATSET={};
-if(Array.isArray(__C.batteries)){__C.batteries.slice(0,4).forEach((b,i)=>{if(!b||!b.level)return;const id='b'+(UN.length+1);UN.push({id,name:b.name||('Batterie '+(UN.length+1)),lvl:b.level,pw:b.power||'',tmp:b.temperature||'sensor.aucun',k:(/bat_in_out/.test(b.power||'')?-1:1)*(b.invert?-1:1)*(__C.invert_bat?-1:1)});if(b.min||b.max)BATSET[id]={min:b.min||'',max:b.max||''}})}
+if(Array.isArray(__C.batteries)){__C.batteries.slice(0,4).forEach((b,i)=>{if(!b||!b.level)return;const id='b'+(UN.length+1);const io=!!(b.power_in||b.power_out);UN.push({id,name:b.name||('Batterie '+(UN.length+1)),lvl:b.level,pw:io?'':(b.power||''),pin:io?(b.power_in||''):'',pout:io?(b.power_out||''):'',tmp:b.temperature||'sensor.aucun',k:(!io&&/bat_in_out/.test(b.power||'')?-1:1)*(b.invert?-1:1)*(__C.invert_bat?-1:1)});if(b.min||b.max)BATSET[id]={min:b.min||'',max:b.max||''}})}
 const PACKS=Array.isArray(__C.packs)?__C.packs:[1,1,1,1];
 const KWH_PACK=__C.kwh_pack!=null?+__C.kwh_pack:2.1;
 const INVERT_BAT=!!__C.invert_bat;
@@ -237,13 +239,13 @@ function autoDetect(st){if(!st)return;const ids=Object.keys(st),has=id=>id&&st[i
  if(!has(SOL.today)){const r=pick(sens,(i,t)=>/solcast/.test(t)&&/aujourd|today/.test(t)&&!/restant|remaining|peak|pic|heure|hour/.test(t)?1:0);if(r){SOL.today=r;DET.solcast=r}}else DET.solcast=SOL.today;
  if(!has(SOL.tomorrow)){const r=pick(sens,(i,t)=>/solcast/.test(t)&&/demain|tomorrow/.test(t)&&!/restant|remaining|peak|pic|heure|hour/.test(t)?1:0);if(r)SOL.tomorrow=r}
  if(!UN.some(u=>has(u.lvl))){const found=[];
-  const lvAll=sens.filter(i=>un(i)==='%'&&/electric_level|battery|batterie|soc|state_of_charge|niveau|pile_average/.test(tx(i))&&!/phone|telephone|tablet|tablette|voiture|car_|_ev|watch|mobile|iphone|pixel|samsung|remote|ups/.test(tx(i)));const lvPile=lvAll.filter(i=>/pile_average/.test(i));
+  const lvAll=sens.filter(i=>un(i)==='%'&&/electric_level|battery|batterie|soc|state_of_charge|niveau|pile_average/.test(tx(i))&&!/phone|telephone|tablet|tablette|voiture|car_|_ev|watch|mobile|iphone|pixel|samsung|remote|ups/.test(tx(i))&&!/min_?soc|max_?soc|soc_?set|soc_?min|soc_?max|soc_?limit|soc_?target|target|limit|reserve|health|soh|cycle|status|state$/.test(i.replace(/^sensor\./,'')));const lvPile=lvAll.filter(i=>/pile_average/.test(i));
   (lvPile.length?lvPile:lvAll).forEach(i=>{
-   const pre=i.replace(/(electric_level|battery_level|battery|state_of_charge|soc|niveau|pile_average)[a-z_0-9]*$/,'');if(pre.length<10)return;
-   const pw=pick(sens.filter(k=>k.startsWith(pre)&&isW(k)),(k,t)=>/ac_input_and_output/.test(k)?5:/bat_in_out|battery_power/.test(k)?3:/puissance|power|in_out/.test(k)?1:0);if(!pw)return;
+   const pre=i.replace(/(electric_level|battery_level|battery|state_of_charge|soc|niveau|pile_average)[a-z_0-9]*$/,'');if(pre.length<10||found.some(f=>f._pre===pre))return;const zin=pick(sens.filter(k=>k.startsWith(pre)&&isW(k)&&/output_pack_power|pack_?charge_?power|battery_?charge_?power/.test(k)),()=>1),zout=pick(sens.filter(k=>k.startsWith(pre)&&isW(k)&&/pack_input_power|pack_?discharge_?power|battery_?discharge_?power/.test(k)),()=>1);
+   const pw=(zin||zout)?'':pick(sens.filter(k=>k.startsWith(pre)&&isW(k)),(k,t)=>/ac_input_and_output/.test(k)?5:/bat_in_out|battery_power/.test(k)?3:/puissance|power|in_out/.test(k)?1:0);if(!pw&&!zin&&!zout)return;
    const tp=pick(sens.filter(k=>k.startsWith(pre)&&un(k)==='°C'),(k,t)=>/tmp|temp/.test(k)?1:0);
    const nm=(at(i).friendly_name||i).replace(/\b(electric level|battery level|battery|niveau|state of charge|soc|level)\b/ig,'').replace(/\s+/g,' ').trim()||'Batterie';
-   found.push({id:'b'+found.length,name:nm,lvl:i,pw,tmp:tp||'sensor.aucun',k:(/bat_in_out/.test(pw)?-1:1)*(INVERT_BAT?-1:1)})});
+   found.push({id:'b'+found.length,_pre:pre,name:nm,lvl:i,pw,pin:zin||'',pout:zout||'',tmp:tp||'sensor.aucun',k:(/bat_in_out/.test(pw)?-1:1)*(INVERT_BAT?-1:1)})});
   if(found.length>1){const w=found.map(f=>f.name.split(' '));let n=0;while(w.every(x=>x.length>n+1&&x[n]===w[0][n]))n++;if(n)found.forEach((f,i)=>f.name=w[i].slice(n).join(' '))}
   found.forEach((f,i)=>{f.name=/pile_average/.test(f.lvl)?'Titan '+(i+1):f.name.slice(0,14)})
   if(found.length){UN.length=0;found.slice(0,4).forEach(f=>UN.push(f));DET.batteries=found.length}}else DET.batteries=UN.length;
@@ -257,10 +259,10 @@ function live(st){retryDetect(st);D.live=true;D.pv=Math.max(0,rd(st,E.pv));D.gri
  D.battMissing=[];
  UN.forEach((u,i)=>{
   const okLvl=!!st[u.lvl]&&!['unknown','unavailable','none',''].includes(String(st[u.lvl].state).toLowerCase())&&!isNaN(parseFloat(st[u.lvl].state));
-  const okPw=!!st[u.pw]&&!['unknown','unavailable','none',''].includes(String(st[u.pw].state))&&!isNaN(parseFloat(st[u.pw].state));
+  const __ok=x=>!!x&&!!st[x]&&!['unknown','unavailable','none',''].includes(String(st[x].state))&&!isNaN(parseFloat(st[x].state));const okPw=(u.pin||u.pout)?(__ok(u.pin)||__ok(u.pout)):!!st[u.pw]&&!['unknown','unavailable','none',''].includes(String(st[u.pw].state))&&!isNaN(parseFloat(st[u.pw].state));
   if(!okLvl)D.battMissing.push({id:u.lvl,name:u.name+' · niveau'});
-  if(!okPw)D.battMissing.push({id:u.pw,name:u.name+' · puissance'});
-  D.p[i]=okPw?(u.k===undefined?-1:u.k)*rd(st,u.pw):0;
+  if(!okPw)D.battMissing.push({id:u.pw||u.pin||u.pout,name:u.name+' · puissance'});
+  D.p[i]=okPw?(u.k===undefined?-1:u.k)*((u.pin||u.pout)?(__ok(u.pin)?rd(st,u.pin):0)-(__ok(u.pout)?rd(st,u.pout):0):rd(st,u.pw)):0;
   D.lvl[i]=okLvl?rd(st,u.lvl):0;
   D.tmp[i]=rd(st,u.tmp);
  });
@@ -289,7 +291,7 @@ const WXI={sunny:'☀','clear-night':'🌙',partlycloudy:'⛅',cloudy:'☁',rain
 /* ===== HISTORIQUE & STATISTIQUES DU JOUR ===== */
 const SER={pv:{id:E.pv,label:'Production',color:'#ffe34a',u:'W',sim:'pv'},grid:{id:E.grid,label:'Réseau',color:'#ff5a4a',u:'W',sim:'pw',k:INVERT_GRID?-1:1},ev:{id:E.ev,label:'Borne VE',color:'#4de1ff',u:'W',sim:'ev'},evSoc:{id:E.evSoc,label:'Batt. voiture',color:'#2dff8a',u:'%',sim:'lvl'},ecs:{id:E.ecs,label:'Ballon',color:'#ff9a3b',u:'W',sim:'ecs'},fc:{fc:true,label:'Prévision Solcast',color:'#ffe34a',u:'W',sim:'fc'}};
 const DC=['#2dff8a','#4de1ff','#ffb13b','#e58cff'];
-const unitP=i=>({id:UN[i].pw,label:UN[i].name,color:DC[i],u:'W',k:UN[i].k===undefined?-1:UN[i].k,sim:'pw'}),unitL=(i,c)=>({id:UN[i].lvl,label:UN[i].name+' %',color:c||DC[i],u:'%',sim:'lvl'});
+const unitP=i=>({id:UN[i].pw||UN[i].pin||UN[i].pout,label:UN[i].name,color:DC[i],u:'W',k:UN[i].k===undefined?-1:UN[i].k,sim:'pw'}),unitL=(i,c)=>({id:UN[i].lvl,label:UN[i].name+' %',color:c||DC[i],u:'%',sim:'lvl'});
 function simSeries(sr,n,t0){const out=[],now=Date.now();t0=t0||now-86400e3;for(let k=0;k<n;k++){const t=t0+(now-t0)*k/(n-1),d=new Date(t),h=d.getHours()+d.getMinutes()/60;let v=0;
  if(sr.sim==='pv')v=h>7.5&&h<17.8?3800*Math.pow(Math.sin(Math.PI*(h-7.5)/10.3),1.2)*(.96+.04*Math.sin(h*2)):0;
  else if(sr.sim==='lvl')v=clamp(25+60*Math.sin(Math.PI*clamp((h-6)/13,0,1))*(h>6?1:0)+(h>19?30-(h-19)*6:0)+((sr.label||'').length%4)*2,5,100);
@@ -501,7 +503,7 @@ $('#pCh').addEventListener('click',()=>openPanel('Production & consommation',{s:
 /* ===== BATTERIES ===== */
 const pBt=$('#pBt');UN.forEach((u,i)=>{const d=document.createElement('div');d.className='bank';d.style.left=(10+i*136)+'px';d.innerHTML=`<div class="bar" id="br${i}"><div class="fl" id="bf${i}"></div><div class="sh"></div><div class="zn lo" id="zl${i}"></div><div class="zn hi" id="zh${i}"></div><div class="pc" id="bp${i}">--</div></div><div class="nm">${u.name}</div><div class="w" id="bw${i}">--</div>`;
  d.addEventListener('click',()=>openPanel(u.name,{s:[Object.assign(unitP(i),{color:'#ffb13b',label:'Puissance'}),unitL(i,'#2dff8a')],r:[['Batterie',fr(D.lvl[i],0)+' %'],['Puissance',fW(D.p[i])],['État',D.p[i]>15?'En charge':D.p[i]<-15?'En décharge':'Veille'],['Température',D.tmp[i]?fr(D.tmp[i],0)+' °C':'--']]}));pBt.appendChild(d)});
-function updBats(){UN.forEach((u,i)=>{const p=D.p[i],missing=(D.battMissing||[]).some(x=>x.id===u.lvl),missingPw=(D.battMissing||[]).some(x=>x.id===u.pw),c=p>15?'#2dff8a':p<-15?'#ffb13b':'#8aa0c0',l=clamp(D.lvl[i],0,100);const b=$('#br'+i);$('#zl'+i).style.height=MIN_PCT+'%';$('#zh'+i).style.height=(100-MAX_PCT)+'%';b.style.borderColor=missing?'#ffb04a':c;b.parentNode.style.setProperty('--c',missing?'#ffb04a':c);b.classList.toggle('chg',!missingPw&&p>15);b.classList.toggle('dis',!missingPw&&p<-15);
+function updBats(){UN.forEach((u,i)=>{const p=D.p[i],missing=(D.battMissing||[]).some(x=>x.id===u.lvl),missingPw=(D.battMissing||[]).some(x=>x.id===(u.pw||u.pin||u.pout)),c=p>15?'#2dff8a':p<-15?'#ffb13b':'#8aa0c0',l=clamp(D.lvl[i],0,100);const b=$('#br'+i);$('#zl'+i).style.height=MIN_PCT+'%';$('#zh'+i).style.height=(100-MAX_PCT)+'%';b.style.borderColor=missing?'#ffb04a':c;b.parentNode.style.setProperty('--c',missing?'#ffb04a':c);b.classList.toggle('chg',!missingPw&&p>15);b.classList.toggle('dis',!missingPw&&p<-15);
   const f=$('#bf'+i);f.style.height=(missing?0:l)+'%';f.style.background=`linear-gradient(${c}cc,${c}55)`;$('#bp'+i).textContent=missing?'--':Math.round(l)+'%';const w=$('#bw'+i);w.textContent=missingPw?'-- W':(p>15?'+':p<-15?'−':'')+Math.round(Math.abs(p))+'W';w.style.color=(missing||missingPw)?'#ffb04a':c;w.style.textShadow='0 0 10px '+c+'88'});
  updBatInfo()}
 /* ===== MÉTÉO ===== */
@@ -604,16 +606,16 @@ const HI={tab:7,data:{}};
 function synthHist(days){const out=[],s=new Date();s.setHours(0,0,0,0);s.setDate(s.getDate()-(days-1));for(let i=0;i<days;i++){const d=new Date(s);d.setDate(s.getDate()+i);const pv=Math.max(1,6+9*Math.abs(Math.sin(i*1.7+1))),cons=11+4*Math.sin(i*.9),self=Math.min(cons,pv*.78+cons*.15);out.push({d,pv,cons,imp:Math.max(0,cons-self),exp:Math.max(0,pv-self),self,eur:self*.27})}return out}
 function buildHist(r,start,days){const hr=x=>Math.floor((typeof x==='number'?x:Date.parse(x))/3.6e6),M={};
  const put=(id,key)=>(r[id]||[]).forEach(p=>{const k=hr(p.start);(M[k]=M[k]||{})[key]=p.mean});
- put(E.pv,'pv');put(E.grid,'g');UN.forEach((u,i)=>put(u.pw,'b'+i));
+ put(E.pv,'pv');put(E.grid,'g');UN.forEach((u,i)=>{if(u.pin||u.pout){put(u.pin,'bi'+i);put(u.pout,'bo'+i)}else put(u.pw,'b'+i)});
  const D0=[];for(let i=0;i<days;i++){const d=new Date(start);d.setDate(start.getDate()+i);D0.push({d,pv:0,cons:0,imp:0,exp:0,eur:0,self:0,ime:0})}
  const s0=new Date(start.getFullYear(),start.getMonth(),start.getDate());let any=false;
  Object.keys(M).forEach(k=>{const m=M[k],t=new Date(+k*3.6e6),di=Math.round((new Date(t.getFullYear(),t.getMonth(),t.getDate())-s0)/864e5);if(di<0||di>=days)return;
-  const pv=Math.max(0,m.pv||0)/1000,g=(m.g||0)*(INVERT_GRID?-1:1)/1000;let chg=0,dis=0;UN.forEach((u,i)=>{const p=(u.k===undefined?-1:u.k)*(m['b'+i]||0)/1000;if(p>0)chg+=p;else dis-=p});
+  const pv=Math.max(0,m.pv||0)/1000,g=(m.g||0)*(INVERT_GRID?-1:1)/1000;let chg=0,dis=0;UN.forEach((u,i)=>{const p=(u.k===undefined?-1:u.k)*(m['b'+i]!==undefined?m['b'+i]:(m['bi'+i]||0)-(m['bo'+i]||0))/1000;if(p>0)chg+=p;else dis-=p});
   const imp=Math.max(0,g),exp=Math.max(0,-g),cons=Math.max(0,pv+g+dis-chg),self=Math.max(0,cons-imp),hh=t.getHours(),hc=isHC(t),price=hc?TARIF_HC:TARIF_HP,o=D0[di];
   o.pv+=pv;o.cons+=cons;o.imp+=imp;o.ime+=imp*price;o.exp+=exp;o.self+=self;o.eur+=self*price;if(pv||cons)any=true});
  return any?D0:null}
 async function histData(days){const c=HI.data[days];if(c&&Date.now()-c.t<300000)return c.v;let v=null;const h=getHass();
- if(!h)v=synthHist(days);else{try{const ids=[E.pv,E.grid,...UN.map(u=>u.pw)],end=new Date(),start=new Date();start.setHours(0,0,0,0);start.setDate(start.getDate()-(days-1));
+ if(!h)v=synthHist(days);else{try{const ids=[E.pv,E.grid,...UN.flatMap(u=>(u.pin||u.pout)?[u.pin,u.pout].filter(Boolean):[u.pw])],end=new Date(),start=new Date();start.setHours(0,0,0,0);start.setDate(start.getDate()-(days-1));
   const r=await h.callWS({type:'recorder/statistics_during_period',start_time:start.toISOString(),end_time:end.toISOString(),statistic_ids:ids,period:'hour',types:['mean']});v=buildHist(r,start,days)}catch(e){v=null}}
  HI.data[days]={t:Date.now(),v};return v}
 function drawHist(D0){const el=$('#hc');if(!D0){el.innerHTML='<div style="padding:30px;font-size:26px;color:#ffb13b;line-height:1.5">Historique indisponible.<br><span style="font-size:20px;color:#9fc0ee">Les capteurs de puissance (solaire, réseau, batteries) doivent avoir des statistiques long terme (state_class: measurement). Si vous venez de les créer, réessayez dans quelques heures.</span></div>';return}
@@ -653,12 +655,12 @@ function updBatInfo(){const f=battForecast(),a=$('#btAvg'),fc=$('#btFc');if(!f){
 
 /* ===== PROFIL DE CONSOMMATION (moyenne des 7 derniers jours, heure par heure) ===== */
 let PROF=null;
-async function loadProf(){const h=getHass();if(!h)return;try{const ids=[E.pv,E.grid,...UN.map(u=>u.pw)],end=new Date(),start=new Date(end.getTime()-7*864e5);
+async function loadProf(){const h=getHass();if(!h)return;try{const ids=[E.pv,E.grid,...UN.flatMap(u=>(u.pin||u.pout)?[u.pin,u.pout].filter(Boolean):[u.pw])],end=new Date(),start=new Date(end.getTime()-7*864e5);
  const r=await h.callWS({type:'recorder/statistics_during_period',start_time:start.toISOString(),end_time:end.toISOString(),statistic_ids:ids,period:'hour',types:['mean']});
  const hr=x=>Math.floor((typeof x==='number'?x:Date.parse(x))/3.6e6),M={};const put=(id,key)=>(r[id]||[]).forEach(p=>{const k=hr(p.start);(M[k]=M[k]||{})[key]=p.mean});
- put(E.pv,'pv');put(E.grid,'g');UN.forEach((u,i)=>put(u.pw,'b'+i));
+ put(E.pv,'pv');put(E.grid,'g');UN.forEach((u,i)=>{if(u.pin||u.pout){put(u.pin,'bi'+i);put(u.pout,'bo'+i)}else put(u.pw,'b'+i)});
  const S=Array(24).fill(0),N=Array(24).fill(0);
- Object.keys(M).forEach(k=>{const m=M[k],t=new Date(+k*3.6e6),pv=Math.max(0,m.pv||0),g=(m.g||0)*(INVERT_GRID?-1:1);let chg=0,dis=0;UN.forEach((u,i)=>{const p=(u.k===undefined?-1:u.k)*(m['b'+i]||0);if(p>0)chg+=p;else dis-=p});
+ Object.keys(M).forEach(k=>{const m=M[k],t=new Date(+k*3.6e6),pv=Math.max(0,m.pv||0),g=(m.g||0)*(INVERT_GRID?-1:1);let chg=0,dis=0;UN.forEach((u,i)=>{const p=(u.k===undefined?-1:u.k)*(m['b'+i]!==undefined?m['b'+i]:(m['bi'+i]||0)-(m['bo'+i]||0));if(p>0)chg+=p;else dis-=p});
   const cons=Math.max(0,pv+g+dis-chg);S[t.getHours()]+=cons;N[t.getHours()]++});
  if(N.every(n=>n>=2)){PROF=S.map((s,i)=>Math.max(100,s/N[i]))}}catch(e){}}
 setTimeout(loadProf,4000);setInterval(loadProf,6*3600e3);
@@ -669,7 +671,7 @@ function detectBatSet(){const h=getHass(),res=[];
  UN.forEach((u,i)=>{const o={u,i,min:null,max:null,cand:[]};
   const man=BATSET[u.id]||{};
   if(!h){o.min={id:'number.sim_'+u.id+'_min_soc',v:MIN_PCT,lo:0,hi:50,st:5};o.max={id:'number.sim_'+u.id+'_soc_set',v:MAX_PCT,lo:40,hi:100,st:5};res.push(o);return}
-  const pre=(u.lvl||'').replace(/^sensor\./,'').replace(/_(electric_level|pile_average)$/,'');
+  const pre=(u.lvl||'').replace(/^sensor\./,'').replace(/_(electric_level|pile_average|soc_level|battery_level|state_of_charge|soc)$/,'');
   const mk=(id)=>{const s=h.states[id];if(!s)return null;const a=s.attributes||{};return{id,v:+s.state,lo:a.min!==undefined?+a.min:0,hi:a.max!==undefined?+a.max:100,st:a.step!==undefined?+a.step:1}};
   if(man.min)o.min=mk(man.min);if(man.max)o.max=mk(man.max);
   if(!o.min||!o.max)Object.keys(h.states).forEach(id=>{if(!id.startsWith('number.')||!(id.includes(pre)||/(^|[._])cluster_/.test(id)))return;const a=h.states[id].attributes||{},un=a.unit_of_measurement;if(un&&/^(w|kw|a|v|wh|kwh|°c|c)$/i.test(un))return;const k=id.replace('number.','');o.cand.push(id);
@@ -1883,7 +1885,7 @@ __H(24);
 __H(25);
 
 ;/* marque affichée selon les batteries détectées */
-(function(){var last='',FIX={isypower:'Isypower',izypower:'Izypower',zendure:'Zendure',none:'Batteries'};function upd(){try{var ids=UN.map(function(u){return String(u.lvl||'')+' '+String(u.pw||'')}).join(' ').toLowerCase();
+(function(){var last='',FIX={isypower:'Isypower',izypower:'Izypower',zendure:'Zendure',none:'Batteries'};function upd(){try{var ids=UN.map(function(u){return String(u.lvl||'')+' '+String(u.pw||'')+' '+String(u.pin||'')}).join(' ').toLowerCase();
  var b=FIX[__C.brand]||(/isypower/.test(ids)?'Isypower':/pile_average|izypower|titan/.test(ids)?'Izypower':/electric_level|bat_in_out|zendure|solarflow|hyper_?2000|hub_?2000|ace_?1500|aio/.test(ids)?'Zendure':'Batteries');
  if(b!==last){last=b;document.querySelectorAll('.zbrand').forEach(function(e){e.textContent=b})}}catch(e){}}
  upd();setInterval(upd,3000)})();
@@ -1976,7 +1978,7 @@ class EnergieCard extends HTMLElement {
     zh.appendChild(zb); root.appendChild(zh);
     this._size(zh);
 
-    const run = this._run = { dead: false, timers: new Set(), intervals: new Set(), rafs: new Set(), listeners: [],
+    const run = this._run = { visible: true, dead: false, timers: new Set(), intervals: new Set(), rafs: new Set(), listeners: [],
       resize: [], own: Object.create(null), audio: [], css: new WeakMap(), mo: null, ro: null };
 
     /* erreurs : bandeau rouge dans la carte (comme le fichier d'origine), sans toucher à la console de Home Assistant */
@@ -1990,11 +1992,36 @@ class EnergieCard extends HTMLElement {
 
     /* minuteries suivies (arrêtées quand la carte disparaît) */
     const sT = (fn, ms, ...a) => { const id = W.setTimeout(() => { run.timers.delete(id); if (run.dead) return; try { typeof fn === 'function' && fn(...a); } catch (e) { fail(e); } }, ms); run.timers.add(id); return id; };
-    const sI = (fn, ms, ...a) => { const id = W.setInterval(() => { if (run.dead) return; try { typeof fn === 'function' && fn(...a); } catch (e) { fail(e); } }, ms); run.intervals.add(id); return id; };
+    // minuteries rapides (≤ 250 ms) = animations : suspendues hors écran, une sur deux en mode Économie
+    const sI = (fn, ms, ...a) => {
+      const fast = +ms <= 250; let n = 0;
+      const id = W.setInterval(() => {
+        if (run.dead) return;
+        if (fast && (!run.visible || (card._config.animations === 'eco' && (n++ & 1)))) return;
+        try { typeof fn === 'function' && fn(...a); } catch (e) { fail(e); }
+      }, ms);
+      run.intervals.add(id); return id;
+    };
     const cT = id => { run.timers.delete(id); W.clearTimeout(id); };
     const cI = id => { run.intervals.delete(id); W.clearInterval(id); };
-    const rAF = fn => { const id = W.requestAnimationFrame(t => { run.rafs.delete(id); if (run.dead) return; try { fn(t); } catch (e) { fail(e); } }); run.rafs.add(id); return id; };
-    const cAF = id => { run.rafs.delete(id); W.cancelAnimationFrame(id); };
+    /* animations : limitées en mode Économie (30 images/s) et suspendues quand la carte n'est pas visible */
+    const minDt = card._config.animations === 'eco' ? 1000 / 30 : 0;
+    run.visible = true; run.held = new Map(); run.lastFrame = -1e9;
+    let seq = 0; const real = new Map();
+    const rAF = fn => {
+      const id = ++seq;
+      const tick = t => {
+        if (run.dead) return;
+        if (!run.visible) { real.delete(id); run.held.set(id, tick); return; }          // en pause : reprise à l'affichage
+        if (minDt && t !== run.lastFrame && t - run.lastFrame < minDt - 1) { real.set(id, W.requestAnimationFrame(tick)); return; }
+        run.lastFrame = t; real.delete(id); run.rafs.delete(id);
+        try { fn(t); } catch (e) { fail(e); }
+      };
+      real.set(id, W.requestAnimationFrame(tick)); run.rafs.add(id);
+      return id;
+    };
+    const cAF = id => { run.rafs.delete(id); run.held.delete(id); const r = real.get(id); if (r) W.cancelAnimationFrame(r); real.delete(id); };
+    run.cancelAll = () => { real.forEach(r => W.cancelAnimationFrame(r)); real.clear(); run.held.clear(); };
 
     /* écouteurs « fenêtre » : redimensionnement = taille de la carte, clics/touches = dans la carte seulement */
     const addL = (type, fn, opt) => {
@@ -2086,6 +2113,19 @@ class EnergieCard extends HTMLElement {
     };
     run.ro = new ResizeObserver(() => { layoutCtl(); (run.drag || []).forEach(f => f()); run.resize.forEach(f => { try { f.call(winP, { type: 'resize' }); } catch (e) { fail(e); } }); });
     run.ro.observe(zh);
+
+    // pause quand la carte est hors écran, l'onglet masqué ou la vue Home Assistant changée
+    let inView = true;
+    const setVis = () => {
+      const v = inView && !D.hidden && card.isConnected;
+      if (v === run.visible) return;
+      run.visible = v; zh.classList.toggle('paused', !v);
+      if (v) { const h = [...run.held.values()]; run.held.clear(); h.forEach(f => real.set(++seq, W.requestAnimationFrame(f))); }
+    };
+    run.io = new IntersectionObserver(es => { inView = es.some(e => e.isIntersecting); setVis(); });
+    run.io.observe(zh);
+    const onVis = () => setVis();
+    D.addEventListener('visibilitychange', onVis); run.listeners.push([D, 'visibilitychange', onVis]);
 
     const H = i => zb.insertAdjacentHTML('beforeend', HTML[i]);
     try {
@@ -2236,9 +2276,9 @@ class EnergieCard extends HTMLElement {
   _teardown() {
     const run = this._run; if (!run) return;
     run.dead = true;
-    run.timers.forEach(id => clearTimeout(id)); run.intervals.forEach(id => clearInterval(id)); run.rafs.forEach(id => cancelAnimationFrame(id));
+    run.timers.forEach(id => clearTimeout(id)); run.intervals.forEach(id => clearInterval(id)); run.cancelAll && run.cancelAll();
     run.listeners.forEach(([t, ty, f, o]) => { try { t.removeEventListener(ty, f, o); } catch (e) {} });
-    try { run.mo.disconnect(); run.ro.disconnect(); } catch (e) {}
+    try { run.mo.disconnect(); run.ro.disconnect(); run.io && run.io.disconnect(); } catch (e) {}
     run.audio.forEach(a => { try { a.close(); } catch (e) {} });
     try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) {}
     this.classList.remove('pfs');
@@ -2264,7 +2304,7 @@ const LABELS = {
   weather: 'Météo', house_temp: 'Température de la maison',
   today: 'Prévision Solcast aujourd’hui', tomorrow: 'Prévision Solcast demain',
   haute: 'Sonde haute', basse: 'Sonde basse', grande: 'Grande chauffe', desinf: 'Dernière désinfection',
-  name: 'Nom affiché', level: 'Niveau (%)', power: 'Puissance charge/décharge (W)', temperature: 'Température',
+  name: 'Nom affiché', level: 'Niveau (%)', power: 'Puissance charge/décharge (W)', power_in: 'Ou : puissance entrée / charge (W)', power_out: 'Ou : puissance sortie / décharge (W)', temperature: 'Température',
   min: 'Réglage du mini (number.*)', max: 'Réglage du maxi (number.*)', invert: 'Charge/décharge inversée',
   portail: 'Portail', garage: 'Porte de garage', volets: 'Volets', chauffage: 'Chauffage', scenarios: 'Scénarios',
   voiture: 'Voiture électrique', ballon: 'Ballon d’eau chaude', rappels: 'Rappels 🔔', chauffeeau: 'Tuile chauffe-eau', watt: 'Assistant Watt 👷',
@@ -2283,9 +2323,11 @@ const HELPERS = {
   fit_screen: 'La carte entière reste visible sans défiler',
   agent: 'Vide = assistant par défaut de Home Assistant',
   level: 'Laissez toutes les batteries vides pour la détection automatique',
+  power_in: 'Batteries avec deux capteurs (Zendure : output_pack_power / pack_input_power). Remplace la case du dessus.',
 };
 const bat = i => ({ type: 'expandable', name: 'bat' + i, title: 'Batterie ' + i, icon: 'mdi:battery-high', schema: [
   { name: 'name', selector: { text: {} } }, { name: 'level', selector: SENSOR }, { name: 'power', selector: SENSOR },
+  { type: 'grid', name: '', schema: [{ name: 'power_in', selector: SENSOR }, { name: 'power_out', selector: SENSOR }] },
   { name: 'temperature', selector: SENSOR },
   { name: 'capacity', selector: NUM(0.001, 'kWh') },
   { type: 'grid', name: '', schema: [{ name: 'min', selector: ENT('number') }, { name: 'max', selector: ENT('number') }] },
