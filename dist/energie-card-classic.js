@@ -26,7 +26,7 @@
  INSTALL (EN) — drop in /config/www, add an iframe card pointing to /local/<file>.html.
     Sensors are auto-discovered (solar, grid, Izypower Titan batteries, EV, water heater, Solcast, weather).
 */
-/* Style « Classique » (v2) de la carte energie-card 1.2.1.
+/* Style « Classique » (v2) de la carte energie-card 1.2.2.
    Chargé automatiquement par energie-card.js quand le style Classique est choisi :
    NE PAS l'ajouter comme ressource. */
 (window.__ENERGIE_CARD_DASH = window.__ENERGIE_CARD_DASH || {}).classic = {
@@ -118,7 +118,7 @@ const UN=[];
 const BATSET={};
 if(Array.isArray(__C.batteries)){__C.batteries.slice(0,4).forEach((b,i)=>{if(!b||!b.level)return;const id='b'+(UN.length+1);UN.push({id,name:b.name||('Batterie '+(UN.length+1)),lvl:b.level,pw:b.power||'',tmp:b.temperature||'sensor.aucun',k:b.invert?-1:1});if(b.min||b.max)BATSET[id]={min:b.min||'',max:b.max||''}})}
 const PACKS=Array.isArray(__C.packs)?__C.packs:[1,1,1,1];
-const KWH_PACK=__C.kwh_pack!=null?+__C.kwh_pack:4.02;
+const KWH_PACK=__C.kwh_pack!=null?+__C.kwh_pack:2.1;
 const INVERT_BAT=!!__C.invert_bat;
 
 /* ─── 4. TARIFS ET HEURES CREUSES ─────────────────────────────────────────────── */
@@ -467,7 +467,7 @@ var GATE_EXPIRE_MIN=20;/* le portail « OUVERT » (dernier ordre) repasse en INC
 /* réglage manuel si la détection échoue : {sf1:{min:'number.xxx',max:'number.yyy'}, sf2:{...}} (sf1, sf2, hy, sf3 = ordre des batteries) */
 /* nombre de batteries (packs) de chaque appareil, dans l'ordre d'affichage ; [] = masquer le stock */
 var MIN_PCT=25,MAX_PCT=80;var EV_KWH=__C.ev_kwh!=null?+__C.ev_kwh:60,EV_TARGET=__C.ev_target!=null?+__C.ev_target:80;/* capacité utile de la voiture (kWh) et niveau visé (%) pour l'heure de fin estimée *//* capacité d'un pack en kWh, niveau mini et maxi que vous gardez */
-const capOf=i=>(PACKS.length?(PACKS[i]===undefined?PACKS[PACKS.length-1]:PACKS[i]):0)*KWH_PACK;
+const capOf=i=>(Array.isArray(__C.batteries)&&__C.batteries.filter(b=>b&&(b.level||b.capacity))[i]&&+__C.batteries.filter(b=>b&&(b.level||b.capacity))[i].capacity>0)?+__C.batteries.filter(b=>b&&(b.level||b.capacity))[i].capacity:(PACKS.length?(PACKS[i]===undefined?PACKS[PACKS.length-1]:PACKS[i]):0)*KWH_PACK;
 const ALERT_BAT_PCT=MIN_PCT+3,ALERT_IMPORT_W=5000,ALERT_OPEN_MIN=10,NUIT_DEBUT=23,NUIT_FIN=6,ECO_TEMP=17,COMFORT_TEMP=20;
 const LS={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
 /* ===== ALERTES ===== */
