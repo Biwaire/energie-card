@@ -88,6 +88,9 @@ batteries:                # 4 maximum
   - name: Titan
     level: sensor.titan_pile_average            # %
     power: sensor.titan_ac_input_and_output     # W
+    # ou, si la batterie a deux capteurs (Zendure : charge et décharge séparées) :
+    # power_in: sensor.solarflow_output_pack_power   # W entrant (charge)
+    # power_out: sensor.solarflow_pack_input_power  # W sortant (décharge)
     temperature: sensor.titan_battery_temperature
     min: number.titan_soc_mini                  # réglage du mini
     max: number.titan_soc_maxi                  # réglage du maxi
@@ -173,6 +176,8 @@ Vos réglages enregistrés dans le navigateur (thème, rappels, seuils, Watt) so
 - **Une batterie affiche « -- »** : vérifiez ses capteurs dans la rubrique Batteries. Le bouton **Statut** de la vue Réacteur liste les capteurs hors ligne.
 - **L'historique 7 / 30 jours est vide** : vos capteurs de puissance doivent avoir des statistiques long terme (`state_class: measurement`).
 - **Charge et décharge sont inversées** : cochez « Charge/décharge inversée » pour la batterie concernée.
+- **Zendure : la puissance batterie est fausse** : beaucoup d'appareils Zendure donnent deux capteurs, un pour la charge (`output_pack_power`) et un pour la décharge (`pack_input_power`). Renseignez-les dans « Puissance entrée » et « Puissance sortie » de la batterie (la carte les détecte normalement toute seule).
+- **Le processeur travaille beaucoup quand la carte est affichée** : c'est normal, ce sont les animations (réacteur, flux, halos lumineux), comme avec la version HTML d'origine. La carte se met en pause toute seule dès qu'elle n'est plus visible (autre onglet, autre page, fenêtre réduite) : le processeur retombe alors presque à zéro.
 
 ## Crédits
 
