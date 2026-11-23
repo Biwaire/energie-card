@@ -24,6 +24,8 @@ const LABELS = {
   ev_target: 'Charge visée voiture (%)', co2_kg_kwh: 'CO₂ du réseau (kg/kWh)', agent: 'Assistant de conversation pour Watt',
 };
 const HELPERS = {
+  capacity: 'À additionner. Isypower/Izypower : Titan seul 2,1 · Link 2,1 · nouveau Link 4,032. Zendure : AB1000 0,96 · AB2000 1,92. Vide = packs × capacité d’un pack.',
+  kwh_pack: 'Utilisé seulement pour les batteries sans capacité indiquée (2,1 = un Titan seul)',
   brand: 'Automatique : selon les batteries détectées',
   style: 'Nouveau : vue Réacteur sombre et nette. Classique : salle des machines claire (version d’origine).',
   hc_text: 'Une ou plusieurs plages, ex. 22:00-06:00 ou 01:04-06:34, 14:34-17:04',
@@ -35,6 +37,7 @@ const HELPERS = {
 const bat = i => ({ type: 'expandable', name: 'bat' + i, title: 'Batterie ' + i, icon: 'mdi:battery-high', schema: [
   { name: 'name', selector: { text: {} } }, { name: 'level', selector: SENSOR }, { name: 'power', selector: SENSOR },
   { name: 'temperature', selector: SENSOR },
+  { name: 'capacity', selector: NUM(0.001, 'kWh') },
   { type: 'grid', name: '', schema: [{ name: 'min', selector: ENT('number') }, { name: 'max', selector: ENT('number') }] },
   { name: 'invert', selector: { boolean: {} } }] });
 const NUM = (step, unit) => ({ number: { mode: 'box', step, unit_of_measurement: unit } });

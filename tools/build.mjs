@@ -82,7 +82,9 @@ patchRe(/const UN=\[[\s\S]*?\];\nconst BATSET=\{[^\n]*\};/,
   "const UN=[];\nconst BATSET={};\n" +
   "if(Array.isArray(__C.batteries)){__C.batteries.slice(0,4).forEach((b,i)=>{if(!b||!b.level)return;const id='b'+(UN.length+1);UN.push({id,name:b.name||('Batterie '+(UN.length+1)),lvl:b.level,pw:b.power||'',tmp:b.temperature||'sensor.aucun',k:b.invert?-1:1});if(b.min||b.max)BATSET[id]={min:b.min||'',max:b.max||''}})}", 'UN/BATSET');
 patch("const PACKS=[1,1];", "const PACKS=Array.isArray(__C.packs)?__C.packs:[1,1,1,1];", 'PACKS');
-patch("const KWH_PACK=4.02;", "const KWH_PACK=__C.kwh_pack!=null?+__C.kwh_pack:4.02;", 'KWH_PACK');
+patch("const KWH_PACK=4.02;", "const KWH_PACK=__C.kwh_pack!=null?+__C.kwh_pack:2.1;", 'KWH_PACK');
+// capacité propre à chaque batterie (kWh) : prioritaire sur packs × capacité d'un pack
+patch("const capOf=i=>(PACKS.length?", "const capOf=i=>(Array.isArray(__C.batteries)&&__C.batteries.filter(b=>b&&(b.level||b.capacity))[i]&&+__C.batteries.filter(b=>b&&(b.level||b.capacity))[i].capacity>0)?+__C.batteries.filter(b=>b&&(b.level||b.capacity))[i].capacity:(PACKS.length?", 'capacité par batterie');
 patch("const INVERT_BAT=false;", "const INVERT_BAT=!!__C.invert_bat;", 'INVERT_BAT');
 patch("const TARIF_HP=0.176,TARIF_HC=0.1361;", "const TARIF_HP=__C.tarif_hp!=null?+__C.tarif_hp:0.176,TARIF_HC=__C.tarif_hc!=null?+__C.tarif_hc:0.1361;", 'TARIFS');
 patchRe(/const HC_PLAGES=\[\[[^\n]*?\]\];/, "const HC_PLAGES=Array.isArray(__C.hc_plages)&&__C.hc_plages.length?__C.hc_plages:[['22:00','06:00']];", 'HC_PLAGES');
