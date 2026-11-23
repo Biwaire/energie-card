@@ -1,9 +1,9 @@
-# ⚡ Énergie Réacteur — carte Home Assistant pour batteries Izypower Titan
+# ⚡ Énergie Réacteur — carte Home Assistant pour batteries Isypower (Izypower) Titan et Zendure
 
 [![HACS](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz)
 [![Version](https://img.shields.io/github/v/release/Biwaire/energie-card)](https://github.com/Biwaire/energie-card/releases)
 
-Un tableau de bord énergie complet, en **une seule carte** : production solaire, réseau, batteries **Izypower Titan**, voiture électrique, ballon d'eau chaude, prévisions Solcast, météo, historique, scénarios… et **Watt** 👷, l'assistant qui commente votre maison.
+Un tableau de bord énergie complet, en **une seule carte** : production solaire, réseau, batteries **Isypower (ex-Izypower) Titan** ou **Zendure** (SolarFlow, Hyper…), voiture électrique, ballon d'eau chaude, prévisions Solcast, météo, historique, scénarios… et **Watt** 👷, l'assistant qui commente votre maison.
 
 Deux vues au choix : **⚡ Énergie** (poste de supervision) et **⚛ Réacteur** (salle des machines animée).
 
@@ -47,7 +47,7 @@ HACS ajoute tout seul la ressource. Les mises à jour arriveront ensuite dans HA
 
 ## Réglages : rien à écrire
 
-La carte **trouve seule vos capteurs** : solaire, réseau, batteries Izypower, borne de recharge, ballon, Solcast, météo, température de la maison.
+La carte **trouve seule vos capteurs** : solaire, réseau, batteries Isypower/Izypower ou Zendure, borne de recharge, ballon, Solcast, météo, température de la maison.
 
 Si un capteur est mal détecté, ouvrez la carte en modification : l'**éditeur visuel** permet de choisir le bon dans une liste. Les rubriques :
 
@@ -56,7 +56,7 @@ Si un capteur est mal détecté, ouvrez la carte en modification : l'**éditeur 
 | Style du tableau de bord | Nouveau (v2.7) ou Classique (v2) |
 | Capteurs principaux | solaire, réseau, borne voiture, niveau et autonomie voiture, ballon ECS |
 | Météo, température, prévisions | entité météo, température de la maison, Solcast aujourd'hui / demain |
-| Batteries | jusqu'à 4 batteries : nom, niveau, puissance, température, réglages mini / maxi |
+| Batteries | jusqu'à 4 batteries : nom, niveau, puissance, température, réglages mini / maxi ; marque affichée (automatique, Isypower, Izypower, Zendure ou sans marque) |
 | Éléments affichés | voiture, ballon, chauffage, volets, portail, garage, rappels, Watt… |
 | Tarifs et heures creuses | prix HP / HC, plages d'heures creuses |
 | Tuile chauffe-eau | sondes haute / basse, grande chauffe, désinfection |
@@ -92,6 +92,7 @@ batteries:                # 4 maximum
     min: number.titan_soc_mini                  # réglage du mini
     max: number.titan_soc_maxi                  # réglage du maxi
     invert: false                               # charge/décharge à l'envers
+brand: isypower           # marque affichée : isypower, izypower, zendure, none (absent = automatique)
 packs: [1, 1]             # packs par batterie
 kwh_pack: 4.02            # capacité d'un pack (kWh)
 invert_bat: false
@@ -123,6 +124,7 @@ ev_target: 80             # % visé
 agent: conversation.google_generative_ai   # '' = assistant par défaut
 fit_screen: true          # la carte tient dans la hauteur de l'écran (false = pleine largeur, défilement)
 fullscreen_button: true   # bouton plein écran ⛶
+swipe: true               # changer de vue en glissant le doigt (écran tactile)
 fullscreen_landscape: true  # passer en paysage en plein écran (Android)
 aspect_ratio: 16/9        # ou 56% (comme l'ancienne iframe)
 height: calc(100vh - 56px)  # hauteur fixe (prioritaire)
@@ -130,6 +132,10 @@ height: calc(100vh - 56px)  # hauteur fixe (prioritaire)
 
 Un exemple réel complet se trouve dans [`examples/config-biwaire.yaml`](examples/config-biwaire.yaml).
 </details>
+
+## Changer de vue en glissant (téléphone, tablette)
+
+Sur écran tactile, faites glisser le doigt horizontalement sur le tableau : **vers la gauche** pour la vue Réacteur, **vers la droite** pour revenir à la vue Énergie. Sur ces écrans, le bouton ⚡ Énergie / ⚛ Réacteur est remplacé par deux petits points ● ○ qui indiquent la vue en cours (un appui sur un point change aussi de vue). Sur ordinateur, le bouton reste affiché. Le geste peut être désactivé dans l'éditeur (rubrique Avancé) ou avec `swipe: false` : le bouton revient alors aussi sur mobile.
 
 ## Plein écran
 
@@ -169,7 +175,8 @@ Vos réglages enregistrés dans le navigateur (thème, rappels, seuils, Watt) so
 - Photo de fond de la vue Réacteur : **tazzdel**, diffusée avec son accord.
 - Adaptation aux batteries **Izypower Titan** et version carte : **Biwaire**, avec l'accord écrit de l'auteur original.
 - Licence MIT, au nom des deux auteurs, choisie avec l'accord de tazzdel.
-- Aucune affiliation avec Izypower, Zendure ou Home Assistant.
+- Compatibilité Zendure vérifiée par tazzdel sur son installation.
+- Aucune affiliation avec Isypower (Izypower), Zendure ou Home Assistant.
 
 ## Pour les contributeurs
 
