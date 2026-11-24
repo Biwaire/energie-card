@@ -28,7 +28,7 @@
 */
 /*
  ╔══════════════════════════════════════════════════════════════════════╗
- ║  ENERGIE-CARD 1.3.1 — carte Lovelace (custom:energie-card)            ║
+ ║  ENERGIE-CARD 1.3.2 — carte Lovelace (custom:energie-card)            ║
  ╚══════════════════════════════════════════════════════════════════════╝
  Installation : HACS (dépôt personnalisé, type « Tableau de bord ») ou manuelle (voir README).
  Configuration : éditeur visuel de la carte. Sans réglage, les capteurs sont détectés automatiquement.
@@ -36,7 +36,7 @@
 */
 (() => {
 'use strict';
-const TAG = 'energie-card', VERSION = '1.3.1';
+const TAG = 'energie-card', VERSION = '1.3.2';
 if (customElements.get(TAG)) return;
 console.info('%c ENERGIE-CARD %c ' + VERSION + ' ', 'color:#05080f;background:#2dff8a;font-weight:700', 'color:#2dff8a;background:#05080f');
 
@@ -74,6 +74,7 @@ const BASE_CSS = `/* la carte ne doit rien hériter de la typographie de Home As
 :host(.pfs){position:relative;z-index:2147483000}
 .zh.pfs{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;height:100dvh!important;max-height:none!important;aspect-ratio:auto!important;border-radius:0!important;z-index:2147483000}
 #fsbtn{left:8px;bottom:8px}
+#autobtn{left:52px;bottom:8px}
 /* points de vue : coin bas droit, à la verticale (ne cachent plus la barre de navigation) */
 #vdots{position:absolute;right:8px;bottom:8px;z-index:60;display:flex;flex-direction:column;gap:12px;padding:10px 8px;border-radius:12px;background:rgba(5,8,15,.55)}
 #vdots i{display:block;width:11px;height:11px;border-radius:50%;background:rgba(160,200,255,.35);cursor:pointer}
@@ -453,7 +454,7 @@ updFlux=function(dt){_uf(dt);const k=(window.__fsp||4),V=(36+0)*k*dt;
 
 function updTip(){try{const h=new Date().getHours(),hc=isHC();let t='✔ Tout va bien';const f=battForecast();
  if(D.evExt&&D.ev>1500)t='🚗 Borne publique : non comptée dans la maison';
- else if(f&&f.emptyBeforeSun)t='⚠ Batteries vides avant le soleil : économisez';
+ else if(f&&f.stock<0.3)t='🔋 Réserve atteinte (mini '+MIN_PCT+' %) : le réseau prend le relais';else if(f&&f.emptyBeforeSun)t='⚠ Batteries vides avant le soleil : économisez';
  else if(D.today>=10&&h>=9&&h<14&&D.ecs<15)t='☀ '+fr(D.today,0)+' kWh prévus : ballon ECS vers 13 h';
  else if(hc&&D.p.some((v,i)=>D.lvl[i]<MAX_PCT-2))t='🌙 Heures creuses : bon moment pour charger';
  else if(D.tomorrow&&D.tomorrow<5)t='☁ Peu de soleil demain : gardez du stock';
@@ -554,7 +555,7 @@ const LS={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:
 const ALR={list:[],seen:{},openSince:{},sound:LS.get('zsound')==='1',ctx:null};
 function beep(){try{if(!ALR.ctx)ALR.ctx=new (window.AudioContext||window.webkitAudioContext)();const c=ALR.ctx;[0,.3].forEach(t=>{const o=c.createOscillator(),g=c.createGain();o.frequency.value=880;o.connect(g);g.connect(c.destination);g.gain.setValueAtTime(.2,c.currentTime+t);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+t+.25);o.start(c.currentTime+t);o.stop(c.currentTime+t+.26)})}catch(e){}}
 function calcAlerts(){const L=[],hs=HS();
- {const f=battForecast();if(f&&f.emptyBeforeSun)L.push({k:'vide',lvl:2,t:'Batteries vides avant le matin',v:'vers '+hhmm(f.empty)})}
+ {const f=battForecast();if(f&&f.stock<0.3)L.push({k:'vide',lvl:1,t:'Réserve des batteries atteinte',v:'mini '+MIN_PCT+' % · réseau en relais'});else if(f&&f.emptyBeforeSun)L.push({k:'vide',lvl:2,t:'Batteries vides avant le matin',v:'vers '+hhmm(f.empty)})}
  UN.forEach((u,i)=>{const v=D.lvl[i];if(v!==undefined&&v!==null&&v>=0&&v<=ALERT_BAT_PCT)L.push({k:'bat'+i,lvl:v<8?3:2,t:'Batterie faible',v:u.name+' '+Math.round(v)+' %'})});
  if(D.grid>ALERT_IMPORT_W)L.push({k:'imp',lvl:2,t:'Import réseau élevé',v:fW(D.grid)});
  if(D.offline.length)L.push({k:'off',lvl:1,t:'Capteurs hors ligne',v:D.offline.length+' : '+D.offline.slice(0,2).map(o=>String(o.name).slice(0,16)).join(', ')});
@@ -650,7 +651,7 @@ function battForecast(){if(!PACKS.length||!D.lvl||!UN.length||(D.battMissing||[]
  return{stock,U,tot,avg:stock/U*100,full,empty,cons,emptyBeforeSun}}
 function updBatInfo(){const f=battForecast(),a=$('#btAvg'),fc=$('#btFc');if(!f){a.textContent='MOYENNE '+Math.round(sum(D.lvl.slice(0,UN.length))/UN.length)+' %';fc.textContent='';return}
  a.innerHTML='<b style="font-size:32px;color:#fff;text-shadow:0 0 12px #2dff8a">'+fr(f.stock,1)+'</b> / '+fr(f.U,1)+' kWh';
- let t,c;if(f.emptyBeforeSun){t='⚠ VIDES VERS '+hhmm(f.empty);c='#ff5a4a'}else if(f.full&&(!f.empty||f.full<f.empty)){t='▲ PLEINES VERS '+hhmm(f.full);c='#2dff8a'}else if(f.empty){t='▼ VIDES VERS '+hhmm(f.empty);c='#ffb13b'}else{t='✔ AUTONOMIE OK';c='#2dff8a'}
+ let t,c;if(f.stock<0.3){t='🔋 RÉSERVE ATTEINTE';c='#ffb13b'}else if(f.emptyBeforeSun){t='⚠ VIDES VERS '+hhmm(f.empty);c='#ff5a4a'}else if(f.full&&(!f.empty||f.full<f.empty)){t='▲ PLEINES VERS '+hhmm(f.full);c='#2dff8a'}else if(f.empty){t='▼ VIDES VERS '+hhmm(f.empty);c='#ffb13b'}else{t='✔ AUTONOMIE OK';c='#2dff8a'}
  fc.textContent=t;fc.style.color=c;fc.title='Estimation : conso moyenne '+Math.round(f.cons)+' W + prévision solaire du jour'}
 
 /* ===== PROFIL DE CONSOMMATION (moyenne des 7 derniers jours, heure par heure) ===== */
@@ -1059,7 +1060,7 @@ function clock(h){h=((h%24)+24)%24;return Math.floor(h)+':'+String(Math.round((h
 function analyse(){var dv=derived(),st=stock(),H=new Date().getHours()+new Date().getMinutes()/60,r=[],hs=Math.max(150,dv.house),pct=st.cap?Math.round(st.kwh/st.cap*100):0;
  var night=D.pv<150;
  /* autonomie */
- var du=st.kwh*1000/hs;r.push(['Autonomie des batteries',st.kwh.toFixed(1).replace('.',',')+' kWh utiles ('+pct+' %), au rythme de '+fW(hs)+' : '+hh(du)+', soit jusqu’à '+clock(H+du)+(night&&du<(((7-H)+24)%24)?'. Attention : pas assez pour tenir jusqu’au matin, il manquera '+((((7-H)+24)%24)*hs/1000-st.kwh).toFixed(1).replace('.',',')+' kWh.':'.')]);
+ var du=st.kwh*1000/hs;if(st.kwh<0.3)r.push(['Autonomie des batteries','Les batteries ont atteint leur réserve (mini '+MIN_PCT+' %) : le réseau prend le relais.']);else r.push(['Autonomie des batteries',st.kwh.toFixed(1).replace('.',',')+' kWh utiles ('+pct+' %), au rythme de '+fW(hs)+' : '+hh(du)+', soit jusqu’à '+clock(H+du)+(night&&du<(((7-H)+24)%24)?'. Attention : pas assez pour tenir jusqu’au matin, il manquera '+((((7-H)+24)%24)*hs/1000-st.kwh).toFixed(1).replace('.',',')+' kWh.':'.')]);
  /* pourquoi réseau */
  var why;if(D.grid>150){var lo=D.lvl.every(function(v){return v<=MIN_PCT+2});why=lo?'J’importe '+fW(D.grid)+' parce que les batteries sont au minimum ('+MIN_PCT+' %).':D.ev>=1500&&!D.evExt?'J’importe '+fW(D.grid)+' : la voiture ('+fW(D.ev)+') dépasse ce que le soleil et les batteries peuvent fournir.':D.pv<200?'J’importe '+fW(D.grid)+' : il n’y a plus de soleil et les batteries ne couvrent pas tout ('+fW(dv.house)+' de conso).':'J’importe '+fW(D.grid)+' : la maison consomme '+fW(dv.house)+' pour '+fW(D.pv)+' de soleil, les batteries ne suffisent pas à combler.'}else if(D.grid<-150){why='J’exporte '+fW(-D.grid)+' : le soleil ('+fW(D.pv)+') dépasse la maison ('+fW(dv.house)+') et les batteries ne peuvent pas tout absorber.'}else why='Je suis quasi autonome : le réseau ne fournit presque rien ('+fW(Math.abs(D.grid))+').';
  r.push(['Pourquoi le réseau ?',why]);
@@ -1309,7 +1310,7 @@ function upd(){try{
  T('lClk',String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0'));T('lDt',now.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short',year:'numeric'}));
  var bn=(dv.dis||0)-(dv.chg||0),gi=D.grid,sur,st2,cl2;if(bn>30){sur='▼ '+nW(bn);st2='Batteries → maison'+(gi>20?' + réseau '+nW(gi):'');cl2='#ffa64a'}else if(bn<-30){sur='▲ '+nW(-bn);st2='Charge batteries'+(gi>20?' (réseau)':D.pv>0?' (solaire)':'');cl2='#7dff9a'}else if(gi>30){sur='⚡ '+nW(gi);st2='Soutirage réseau';cl2='#ffd24a'}else if(gi<-30){sur='↗ '+nW(-gi);st2='Injection réseau';cl2='#3dff8a'}else{sur='● 0 W';st2='Équilibre';cl2='#9fd8ff'}T('lSur',sur);T('lSurT',st2);C('lSur',cl2);
  var r=document.getElementById('lRing');r.setAttribute('stroke-dasharray',(Math.max(0,Math.min(100,tot))/100*352).toFixed(0)+' 352');document.getElementById('lRingT').textContent=Math.round(tot)+'%';
- var f=null;try{f=battForecast()}catch(e){}var au='--';if(f){if(f.empty){var h=(f.empty-now)/3600e3;au='≈ '+Math.floor(h)+' h '+String(Math.round((h%1)*60)).padStart(2,'0')}else au='> 24 h'}T('lAut',au);
+ var f=null;try{f=battForecast()}catch(e){}var au='--';if(f){if(f.stock<0.3)au='réserve';else if(f.empty){var h=(f.empty-now)/3600e3;au='≈ '+Math.floor(h)+' h '+String(Math.round((h%1)*60)).padStart(2,'0')}else au='> 24 h'}T('lAut',au);
  T('lDpv',nK(DAY.epv||0));T('lDhs',nK(DAY.conso||0));T('lDim',nK(DAY.eimp||0));
  T('lInj',nW(gx<0?-gx:0));T('lFt',nK(D.today||0)+' kWh');var fb=document.getElementById('lFtB');if(fb)fb.style.width=Math.min(100,(DAY.epv||0)/Math.max(.1,D.today||1)*100)+'%';var tm=D.tomorrow||0;T('lFm',nK(tm)+' kWh');T('lFmS',tm<8?'☁ Journée faible':tm<15?'⛅ Journée moyenne':'☀ Belle journée');C('lFmS',tm<8?'#ffb04a':tm<15?'#ffe34a':'#7dff9a');C('lFm',tm<8?'#ffb04a':tm<15?'#ffe34a':'#7dff9a');T('lPre',nW(gx>0?gx:0));
  /* sparkline */
@@ -2134,7 +2135,36 @@ class EnergieCard extends HTMLElement {
     // boutons flottants déplaçables (position mémorisée sur cet appareil)
     this._fullscreen(zh, root, run);
     this._swipe(root, zh, zb);
-    run.drag = ['vsw', 'thbtn', 'fsbtn'].map(id => this._draggable(root.getElementById(id), zh, id, run)).filter(Boolean);
+    this._modeAuto(zh, root, run);
+    run.drag = ['vsw', 'thbtn', 'fsbtn', 'autobtn'].map(id => this._draggable(root.getElementById(id), zh, id, run)).filter(Boolean);
+  }
+
+  /* bouton AUTO / MANUEL (option YAML mode_auto: input_boolean.xxx) : bascule l'entité, 2ᵉ appui pour confirmer */
+  _modeAuto(zh, root, run) {
+    const c = this._config.mode_auto; if (!c) return;
+    const ent = typeof c === 'string' ? c : c.entity; if (!ent) return;
+    const card = this, D = document;
+    const b = D.createElement('button'); b.id = 'autobtn'; b.type = 'button';
+    b.style.cssText = 'position:absolute;z-index:61;height:36px;padding:0 14px;display:flex;align-items:center;gap:7px;border-radius:18px;cursor:pointer;font:800 13px Inter,Roboto,sans-serif;letter-spacing:.08em;white-space:nowrap;box-shadow:0 2px 10px rgba(0,0,0,.45);transition:background .3s,border-color .3s';
+    zh.appendChild(b);
+    let arm = 0, armT = 0;
+    const paint = () => {
+      const s = card._hass && card._hass.states[ent], on = s && s.state === 'on', na = !s || s.state === 'unavailable';
+      const col = na ? '#7d8da3' : on ? '#2dff8a' : '#ffb13b';
+      b.style.color = col; b.style.background = arm ? 'rgba(60,20,10,.92)' : 'rgba(8,18,32,.88)'; b.style.border = '1.5px solid ' + col;
+      b.innerHTML = '<span style="font-size:15px">⏻</span>' + (arm ? (on ? 'PASSER EN MANUEL ?' : 'PASSER EN AUTO ?') : na ? 'AUTO ?' : on ? 'AUTO' : 'MANUEL');
+      b.title = na ? ent + ' introuvable' : on ? 'Mode automatique : toutes les automatisations énergie sont actives' : 'Mode manuel : automatisations énergie suspendues';
+    };
+    b.addEventListener('click', e => {
+      e.stopPropagation(); if (!card._hass) return;
+      if (!arm) { arm = 1; paint(); clearTimeout(armT); armT = setTimeout(() => { arm = 0; paint(); }, 3000); run.timers.add(armT); return; }
+      arm = 0; clearTimeout(armT);
+      const dom = ent.split('.')[0];
+      card._hass.callService(['input_boolean', 'switch', 'automation'].includes(dom) ? dom : 'homeassistant', 'toggle', { entity_id: ent });
+      paint();
+    });
+    const iv = setInterval(() => { if (!arm) paint(); }, 1000); run.intervals.add(iv);
+    paint();
   }
 
   /* bouton plein écran : vrai plein écran si possible, sinon la carte couvre tout l'écran de l'application (iPhone) */
@@ -2182,7 +2212,7 @@ class EnergieCard extends HTMLElement {
   /* écran tactile : glisser horizontalement sur le tableau pour passer d'une vue à l'autre */
   _swipe(root, zh, zb) {
     if (this._config.swipe === false) return;
-    const SKIP = 'input,textarea,select,canvas,[contenteditable],#vsw,#thbtn,#fsbtn,#hamb,#wbtn,#vdots';
+    const SKIP = 'input,textarea,select,canvas,[contenteditable],#vsw,#thbtn,#fsbtn,#autobtn,#hamb,#wbtn,#vdots';
     const OPEN = '#panel.on,#menu.on,#hist.on,#cfm.on,#hmenu.on';
     const scrollsX = el => {
       for (let e = el; e && e !== zh; e = e.parentElement) {
