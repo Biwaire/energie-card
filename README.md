@@ -7,7 +7,7 @@ Un tableau de bord énergie complet, en **une seule carte** : production solaire
 
 Deux vues au choix : **⚡ Énergie** (poste de supervision) et **⚛ Réacteur** (salle des machines animée).
 
-Et deux **styles** : **Nouveau** (réacteur sombre et net, barre de navigation) ou **Classique** (salle des machines claire, version d'origine). Le choix se fait dans l'éditeur de la carte.
+Et trois **styles** : **Nouveau** (réacteur sombre et net, barre de navigation), **Classique** (salle des machines claire, version d'origine) ou **Tuyaux** (la nouvelle salle aux tuyaux bleus de tazzdel, avec détection de batteries toutes marques). Le choix se fait dans l'éditeur de la carte.
 
 ### Style Nouveau (par défaut)
 ![Vue Énergie — style Nouveau](images/energie.jpg)
@@ -17,6 +17,16 @@ Et deux **styles** : **Nouveau** (réacteur sombre et net, barre de navigation) 
 ![Vue Énergie — style Classique](images/classique-energie.jpg)
 ![Vue Réacteur — style Classique](images/classique-reacteur.jpg)
 
+### Style Tuyaux (salle de tazzdel)
+![Vue Réacteur — style Tuyaux](images/tuyaux-reacteur.jpg)
+![Vue Énergie — style Tuyaux](images/tuyaux-energie.jpg)
+
+Ce style garde le moteur de détection « toutes marques » de tazzdel (Zendure, Marstek, Victron, Tesla, Huawei, EcoFlow, Anker…) : le sens charge/décharge s'y calibre tout seul. Les batteries renseignées dans l'éditeur restent prioritaires.
+
+- **Emplacements des batteries** : le numéro de la batterie dans l'éditeur = son emplacement dans la salle (1 à gauche … 4 à droite). Exemple : Batterie 1 et Batterie 4 remplies, 2 et 3 vides → une batterie de chaque côté du réacteur. Les tuyaux lumineux, la vue Énergie et la vue GROS suivent la même disposition. Sans réglage, 2 batteries se placent sur les emplacements 2 et 3.
+- **Maison · commandes** : portail, garage, volets, chauffage et chauffe-eau selon « Éléments affichés ».
+- **Plusieurs plages d'heures creuses** prises en compte partout (coûts, bandeau, conseils).
+- Nouveautés de tazzdel : ouvriers et Watt qui réagissent, teinte jour/nuit, alerte rouge en cas de surcharge.
 
 ---
 
@@ -44,7 +54,7 @@ Les mises à jour arrivent ensuite dans le Marketplace, comme pour les autres ca
 
 ### Installation manuelle
 
-1. Téléchargez `energie-card.js` **et** `energie-card-classic.js` (dossier `dist`).
+1. Téléchargez `energie-card.js`, `energie-card-classic.js` **et** `energie-card-tuyaux.js` (dossier `dist`).
 2. Copiez-les tous dans `/config/www/`. Seul `energie-card.js` s'ajoute comme ressource.
 3. **Paramètres › Tableaux de bord › ⋮ › Ressources › Ajouter** : URL `/local/energie-card.js?v=1`, type **Module JavaScript**.
 4. Rechargez la page. Après chaque mise à jour, passez à `?v=2`, `?v=3`…
@@ -64,7 +74,7 @@ Si un capteur est mal détecté, ouvrez la carte en modification : l'**éditeur 
 
 | Rubrique | Ce qu'on y règle |
 |---|---|
-| Style du tableau de bord | Nouveau (v2.7) ou Classique (v2) |
+| Style du tableau de bord | Nouveau (v2.7), Classique (v2) ou Tuyaux (salle de tazzdel) |
 | Capteurs principaux | solaire, réseau, borne voiture, niveau et autonomie voiture, ballon ECS |
 | Météo, température, prévisions | entité météo, température de la maison, Solcast aujourd'hui / demain |
 | Batteries | jusqu'à 4 batteries : nom, niveau, puissance, température, **capacité (kWh)**, réglages mini / maxi ; marque affichée (automatique, Isypower, Izypower, Zendure ou sans marque) |
@@ -80,7 +90,7 @@ Un champ laissé vide = détection automatique.
 
 ```yaml
 type: custom:energie-card
-style: classic            # Classique (v2) ; absent = Nouveau (v2.7)
+style: classic            # classic = Classique (v2), tuyaux = salle de tazzdel ; absent = Nouveau (v2.7)
 entities:                 # '' ou absent = détection automatique
   pv: sensor.puissance_solaire        # W
   grid: sensor.puissance_reseau       # W, positif = soutirage
@@ -188,12 +198,13 @@ Vos réglages enregistrés dans le navigateur (thème, rappels, seuils, Watt) so
 - **L'historique 7 / 30 jours est vide** : vos capteurs de puissance doivent avoir des statistiques long terme (`state_class: measurement`).
 - **Charge et décharge sont inversées** : cochez « Charge/décharge inversée » pour la batterie concernée.
 - **Zendure : la puissance batterie est fausse** : beaucoup d'appareils Zendure donnent deux capteurs, un pour la charge (`output_pack_power`) et un pour la décharge (`pack_input_power`). Renseignez-les dans « Puissance entrée » et « Puissance sortie » de la batterie (la carte les détecte normalement toute seule).
-- **Le processeur travaille beaucoup quand la carte est affichée** : c'est normal, ce sont les animations (réacteur, flux, halos lumineux), comme avec la version HTML d'origine. La carte se met en pause toute seule dès qu'elle n'est plus visible (autre onglet, autre page, fenêtre réduite) : le processeur retombe alors presque à zéro.
+- **Le processeur travaille beaucoup quand la carte est affichée** : c'est normal, ce sont les animations (réacteur, flux, halos lumineux), comme avec la version HTML d'origine. Les animations sont limitées à 60 images/s (même sur les écrans 120/144/180 Hz), et la carte se met en pause toute seule dès qu'elle n'est plus visible (autre onglet, autre page, fenêtre réduite) : le processeur retombe alors presque à zéro.
 
 ## Crédits
 
 - Tableau de bord d'origine : **[tazzdel](https://github.com/tazzdel)** — [ha-energie-dashboard-v2](https://github.com/tazzdel/ha-energie-dashboard-v2), conçu pour les batteries Zendure.
 - Photo de fond de la vue Réacteur : **tazzdel**, diffusée avec son accord.
+- Style **Tuyaux** (salle aux tuyaux bleus, détection toutes marques) : **tazzdel**, intégré à la carte avec son accord.
 - Adaptation aux batteries **Izypower Titan** et version carte : **Biwaire**, avec l'accord écrit de l'auteur original.
 - Licence MIT, au nom des deux auteurs, choisie avec l'accord de tazzdel.
 - Compatibilité Zendure vérifiée par tazzdel sur son installation.
@@ -204,6 +215,7 @@ Vos réglages enregistrés dans le navigateur (thème, rappels, seuils, Watt) so
 Les tableaux de bord se modifient en HTML, comme avant :
 - `src/energie.html` : style **Nouveau** → `dist/energie-card.js` (carte principale)
 - `src/energie-classic.html` : style **Classique** → `dist/energie-card-classic.js` (chargé seulement si ce style est choisi)
+- `src/energie-tuyaux.html` : style **Tuyaux** (tazzdel) → `dist/energie-card-tuyaux.js` (chargé seulement si ce style est choisi)
 
 La carte est générée automatiquement :
 
