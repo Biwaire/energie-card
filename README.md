@@ -26,7 +26,7 @@ Ce style garde le moteur de détection « toutes marques » de tazzdel (Zendure,
 - **Emplacements des batteries** : le numéro de la batterie dans l'éditeur = son emplacement dans la salle (1 à gauche … 4 à droite). Exemple : Batterie 1 et Batterie 4 remplies, 2 et 3 vides → une batterie de chaque côté du réacteur. Les tuyaux lumineux, la vue Énergie et la vue GROS suivent la même disposition. Sans réglage, 2 batteries se placent sur les emplacements 2 et 3.
 - **Maison · commandes** : portail, garage, volets, chauffage et chauffe-eau selon « Éléments affichés ».
 - **Plusieurs plages d'heures creuses** prises en compte partout (coûts, bandeau, conseils).
-- Nouveautés de tazzdel : ouvriers et Watt qui réagissent, teinte jour/nuit, alerte rouge en cas de surcharge.
+- Nouveautés de tazzdel : ouvriers et Watt qui réagissent, teinte jour/nuit, alerte rouge en cas de surcharge, et le **Cerveau de Watt** (bouton 🧠 : il apprend les habitudes de la maison heure par heure, score du jour, meilleur créneau, voix et sirène en option).
 
 ---
 
