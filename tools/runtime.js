@@ -15,8 +15,8 @@ console.info('%c ENERGIE-CARD %c ' + VERSION + ' ', 'color:#05080f;background:#2
 
 /* tableaux de bord disponibles : « new » est inclus, « classic » est chargé à la demande (fichier voisin) */
 const DASH = window.__ENERGIE_CARD_DASH = window.__ENERGIE_CARD_DASH || {};
-const STYLE_FILES = { classic: 'energie-card-classic.js' };
-const STYLE_NAMES = { new: 'Nouveau', classic: 'Classique' };
+const STYLE_FILES = { classic: 'energie-card-classic.js', tuyaux: 'energie-card-tuyaux.js' };
+const STYLE_NAMES = { new: 'Nouveau', classic: 'Classique', tuyaux: 'Tuyaux' };
 const LOADS = {};
 let BASE_URL = '';
 try { BASE_URL = import.meta.url; } catch (e) {}
@@ -94,7 +94,7 @@ class EnergieCard extends HTMLElement {
   static getStubConfig() { return {}; }
   static getConfigElement() { return document.createElement(TAG + '-editor'); }
 
-  _styleKey() { return this._config.style === 'classic' ? 'classic' : 'new'; }
+  _styleKey() { const s = this._config.style; return s === 'classic' || s === 'tuyaux' ? s : 'new'; }
 
   _maybeStart(force) {
     if (this._run || this._loading || !this.isConnected) return;
@@ -173,8 +173,8 @@ class EnergieCard extends HTMLElement {
     };
     const cT = id => { run.timers.delete(id); W.clearTimeout(id); };
     const cI = id => { run.intervals.delete(id); W.clearInterval(id); };
-    /* animations : limitées en mode Économie (30 images/s) et suspendues quand la carte n'est pas visible */
-    const minDt = card._config.animations === 'eco' ? 1000 / 30 : 0;
+    /* animations : 60 images/s maximum (30 en mode Économie) et suspendues quand la carte n'est pas visible */
+    const minDt = card._config.animations === 'eco' ? 1000 / 30 : 1000 / 60;   // 60 images/s maximum (écrans 120/144/180 Hz)
     run.visible = true; run.held = new Map(); run.lastFrame = -1e9;
     let seq = 0; const real = new Map();
     const rAF = fn => {

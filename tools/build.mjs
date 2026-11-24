@@ -34,7 +34,7 @@ const styles = [...head.matchAll(/<style([^>]*)>([\s\S]*?)<\/style>/g)].map(m =>
 const body = src.slice(bodyStart + '<body>'.length, bodyEnd);
 const html = [], scripts = [];
 let last = 0;
-for (const m of body.matchAll(/<script>([\s\S]*?)<\/script>/g)) {
+for (const m of body.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)) {
   html.push(body.slice(last, m.index));
   scripts.push(m[1]);
   last = m.index + m[0].length;
@@ -48,6 +48,8 @@ function rwCss(css) {
     .replace(/@media\s*\(\s*((?:max|min)-width)\s*:\s*([^)]+)\)\s*\{/g, '@container zh ($1:$2){');
 }
 const stylesOut = styles.map(s => ({ id: s.id, css: rwCss(s.css) }));
+// <style> placés dans le <body> (ex. bnCss de la v3) : même réécriture html/body → conteneurs
+for (let i = 0; i < html.length; i++) html[i] = html[i].replace(/(<style[^>]*>)([\s\S]*?)(<\/style>)/g, (m, a, c, b) => a + rwCss(c) + b);
 
 /* ---------- 3. scripts : retouches ciblées (chacune doit trouver exactement 1 occurrence) ---------- */
 let code = scripts.map((s, i) => `/* ── script ${i + 1}/${scripts.length} ── */\n__H(${i});\n${s}\n;`).join('\n') + `\n__H(${scripts.length});\n`;
@@ -157,13 +159,13 @@ code += `
 /* ---------- style « Tuyaux » (salle de tazzdel) : son moteur batteries « toutes marques » est gardé ---------- */
 if (!MAIN) {
   // batteries de l'éditeur : prioritaires sur la détection automatique (pw2 = capteur de décharge séparé)
-  patchRe(/const UN=\[\n \{id:'b1'[\s\S]*?\];/, "const UN=Array.isArray(__C.batteries)&&__C.batteries.some(b=>b&&b.level)?__C.batteries.filter(b=>b&&b.level).slice(0,4).map((b,i)=>{const io=!!(b.power_in||b.power_out);return{id:'b'+(i+1),name:b.name||('Batterie '+(i+1)),lvl:b.level,pw:io?(b.power_in||b.power_out):(b.power||''),pw2:io&&b.power_in?(b.power_out||''):'',k:(io&&!b.power_in?-1:(!io&&/bat_in_out/.test(b.power||'')?-1:1))*(b.invert?-1:1)*(__C.invert_bat?-1:1),tmp:b.temperature||'sensor.aucun'}}):[\n {id:'b1',name:'Batterie 1',lvl:'sensor.batterie_1_niveau',pw:'sensor.batterie_1_puissance',tmp:'sensor.batterie_1_temp'},\n {id:'b2',name:'Batterie 2',lvl:'sensor.batterie_2_niveau',pw:'sensor.batterie_2_puissance',tmp:'sensor.batterie_2_temp'},\n {id:'b3',name:'Batterie 3',lvl:'sensor.batterie_3_niveau',pw:'sensor.batterie_3_puissance',tmp:'sensor.batterie_3_temp'},\n {id:'b4',name:'Batterie 4',lvl:'sensor.batterie_4_niveau',pw:'sensor.batterie_4_puissance',tmp:'sensor.batterie_4_temp'}];", 'tuyaux : batteries');
+  patchRe(/const UN=\[\n \{id:'b1'[\s\S]*?\];/, "const UN=Array.isArray(__C.batteries)&&__C.batteries.some(b=>b&&b.level)?__C.batteries.filter(b=>b&&b.level).slice(0,4).map((b,i)=>{const io=!!(b.power_in||b.power_out);return{id:'b'+(i+1),slot:__C.batteries.indexOf(b),name:b.name||('Batterie '+(__C.batteries.indexOf(b)+1)),lvl:b.level,pw:io?(b.power_in||b.power_out):(b.power||''),pw2:io&&b.power_in?(b.power_out||''):'',k:(io&&!b.power_in?-1:(!io&&/bat_in_out/.test(b.power||'')?-1:1))*(b.invert?-1:1)*(__C.invert_bat?-1:1),tmp:b.temperature||'sensor.aucun'}}):[\n {id:'b1',name:'Batterie 1',lvl:'sensor.batterie_1_niveau',pw:'sensor.batterie_1_puissance',tmp:'sensor.batterie_1_temp'},\n {id:'b2',name:'Batterie 2',lvl:'sensor.batterie_2_niveau',pw:'sensor.batterie_2_puissance',tmp:'sensor.batterie_2_temp'},\n {id:'b3',name:'Batterie 3',lvl:'sensor.batterie_3_niveau',pw:'sensor.batterie_3_puissance',tmp:'sensor.batterie_3_temp'},\n {id:'b4',name:'Batterie 4',lvl:'sensor.batterie_4_niveau',pw:'sensor.batterie_4_puissance',tmp:'sensor.batterie_4_temp'}];", 'tuyaux : batteries');
   patch("const BATSET={};", "const BATSET={};(Array.isArray(__C.batteries)?__C.batteries.filter(b=>b&&b.level).slice(0,4):[]).forEach((b,i)=>{if(b.min||b.max)BATSET['b'+(i+1)]={min:b.min||'',max:b.max||''}});", 'tuyaux : mini/maxi');
   patchRe(/const PACKS=\[[^\]]*\];/, "const PACKS=Array.isArray(__C.packs)?__C.packs:[1,1,1,1];", 'tuyaux : PACKS');
   patchRe(/const KWH_PACK=[\d.]+;/, "const KWH_PACK=__C.kwh_pack!=null?+__C.kwh_pack:2.1;", 'tuyaux : KWH_PACK');
   patchRe(/const TARIF_HP=[\d.]+,TARIF_HC=[\d.]+;/, "const TARIF_HP=__C.tarif_hp!=null?+__C.tarif_hp:0.176,TARIF_HC=__C.tarif_hc!=null?+__C.tarif_hc:0.1361;", 'tuyaux : tarifs');
-  patchRe(/const HC_DEBUT=\d+,HC_FIN=\d+;/, "const __HCP=Array.isArray(__C.hc_plages)&&__C.hc_plages[0]?__C.hc_plages[0]:['22:00','06:00'];const HC_DEBUT=parseInt(__HCP[0],10)||0,HC_FIN=parseInt(__HCP[1],10)||0;", 'tuyaux : heures creuses');
-  patch("var pr=(hr>=HC_DEBUT||hr<HC_FIN)?.2277:.2941;", "var pr=(HC_DEBUT>HC_FIN?(hr>=HC_DEBUT||hr<HC_FIN):(hr>=HC_DEBUT&&hr<HC_FIN))?TARIF_HC:TARIF_HP;", 'tuyaux : coût');
+  patchRe(/const HC_DEBUT=\d+,HC_FIN=\d+;/, "const HC_PLAGES=Array.isArray(__C.hc_plages)&&__C.hc_plages.length?__C.hc_plages:[['22:00','06:00']];const HC_MIN=HC_PLAGES.map(p=>p.map(x=>{const a=String(x).split(':');return (+a[0])*60+(+a[1]||0)}));function isHC(d){d=d||new Date();const m=d.getHours()*60+d.getMinutes();return HC_MIN.some(p=>p[0]>p[1]?(m>=p[0]||m<p[1]):(m>=p[0]&&m<p[1]))}const HC_TXT=HC_PLAGES.map(p=>String(p[0]).replace(':','h')+'-'+String(p[1]).replace(':','h')).join(' et ');const HC_DEBUT=parseInt(HC_PLAGES[0][0],10)||0,HC_FIN=parseInt(HC_PLAGES[0][1],10)||0;", 'tuyaux : heures creuses');
+  patch("var pr=(hr>=HC_DEBUT||hr<HC_FIN)?.2277:.2941;", "var pr=isHC()?TARIF_HC:TARIF_HP;", 'tuyaux : coût');
   // détection : Izypower/Isypower Titan (pile_average, ac_input_and_output) et Zendure (output_pack_power / pack_input_power)
   patch("const LV=/electric_level|", "const LV=/pile_average|electric_level|", 'tuyaux : niveau Titan');
   patch("let pre=base.replace(/_?(electric_level|", "let pre=base.replace(/_?(pile_average|electric_level|", 'tuyaux : préfixe Titan');
@@ -178,9 +180,79 @@ if (!MAIN) {
   for (let i = 0; i < html.length; i++) html[i] = html[i].split('url("commande-reacteur-fond.jpg")').join('none');
   // bilan du jour : nombre réel de batteries (et non 4 fixes)
   patch("let chg=0,dis=0;for(let k=2;k<6;k++){const v=g[k][i];", "let chg=0,dis=0;for(let k=2;k<2+UN.length&&k<6;k++){const v=g[k][i];", 'tuyaux : bilan du jour');
+  // noms : comme les autres styles, « SolarFlow garage », « Hyper 3 » quand le nom est flou ou en double
+  patch("f.name=f.name.slice(0,16)});", "f.name=f.name.slice(0,16)});{const __on=found.map(g=>g.name);found.forEach((f,i)=>{if(/pile_average/.test(f.lvl))return;const c=f.name.slice(0,14);if(/(^|[\\s/])(de|du|la|charge|batter\\w*|battery|level|niveau|electric)(\\s|$)/i.test(f.name)||__on.some((g,j)=>j!==i&&g.slice(0,14)===c)){const t=f.lvl.replace(/^sensor\\./,'').replace(/_?(electric_level|battery_level|state_of_charge|soc|level|niveau)[a-z_0-9]*$/,'').split('_').filter(Boolean);if(t.length>1)f.name=(t[0].charAt(0).toUpperCase()+t[0].slice(1)+' '+t[t.length-1]).replace(/^Solarflow/,'SolarFlow').slice(0,17)}})}", 'tuyaux : noms');
+  // voiture : même détection que les autres styles (pas de capteur de batterie, de max ou de consigne ; borne Isypower prioritaire)
+  patch("const r=pick(sens.filter(isW),(i,t)=>/charging_power|charge_power|puissance_charge|wallbox|borne|evse|charger/.test(t)?1+(/charging_power/.test(t)?2:0):0);", "const r=pick(sens.filter(isW),(i,t)=>/charging_power|charge_power|puissance_charge|wallbox|borne|evse|charger/.test(t)&&!/titan|pile|batter|bat_|cluster|max|limit|consigne|setpoint|rated|nominal|target|schedul|planif|pack|solarflow|hyper/.test(t)?1+(/charging_power/.test(t)?2:0)+(/ev_charger|evse|wallbox|borne/.test(t)?3:0)+(/ev_charger_(puissance|power)/.test(t)?4:0):0);", 'tuyaux : voiture');
+  // vue Réacteur : 2 batteries → emplacements 2 et 3 (de part et d'autre du réacteur)
+  patch("var BX=[[423,128],[555,128],[982,128],[1105,128]]", "var __SK,BX=(function(){var S=[[420,132],[550,134],[980,132],[1105,128]],K=UN.every(function(u){return u.slot>=0&&u.slot<4})?UN.map(function(u){return u.slot}):UN.length===1?[1]:UN.length===2?[1,2]:UN.length===3?[0,1,2]:[0,1,2,3];__SK=K;return K.map(function(k){return S[k]})})()", 'tuyaux : emplacements batteries');
+  // v3 : icônes 🧠/🎬 passées à la place de la classe (boutons vides) ; boutons seulement sur la vue Réacteur
+  if (code.includes("el('button','bnB','🧠',null,dock)")) { code = code.split("el('button','bnB','🧠',null,dock)").join("el('button','bnB',null,'🧠',dock)").split("el('button','bnC','🎬',null,dock)").join("el('button','bnC',null,'🎬',dock)"); }
+  for (let i = 0; i < html.length; i++) html[i] = html[i].replace('<style id="bnCss">', '<style id="bnCss">\n.zb:not(.lum) #bnDock{display:none}');
+  // plaques batteries : même taille que le bloc orange de la photo
+  patch("d.style.cssText='left:'+BX[i][0]+'px;top:462px;width:'+BX[i][1]+'px;height:120px'", "d.style.cssText='left:'+BX[i][0]+'px;top:448px;width:'+BX[i][1]+'px;height:138px'", 'tuyaux : taille plaques');
+  // Maison · commandes : tuiles selon « Éléments affichés » + tuile Chauffe-eau (comme le style Nouveau)
+  patch("mkTile('ctV',3,'VOLETS',IC.blinds,[['vup','▲'],['vdn','▼'],['vgo','RÉGLER',1.5]]);", "mkTile('ctV',3,'VOLETS',IC.blinds,[['vup','▲'],['vdn','▼'],['vgo','RÉGLER',1.5]]);" + `(function(){try{
+const M=Object.assign({portail:false,garage:false,chauffage:true,volets:false,chauffeeau:true},__C.modules||{}),EC=Object.assign({haute:'',basse:'',grande:'',desinf:''},__C.ecs_tile||{}),EF={found:false};
+function layout(){const L=[['ctP',M.portail],['ctG',M.garage],['ctC',M.chauffage],['ctV',M.volets],['ctE',M.chauffeeau&&EF.found]].filter(t=>{const e=document.getElementById(t[0]);if(!e)return false;e.style.display=t[1]?'':'none';return t[1]});
+ const w=Math.floor((4*241-11)/Math.max(1,L.length))-11;L.forEach((t,i)=>{const e=document.getElementById(t[0]);e.style.left=(14+i*(w+11))+'px';e.style.width=w+'px'});pCt.style.display=L.length?'':'none'}
+if(M.chauffeeau){const te=document.createElement('div');te.className='tile';te.id='ctE';te.style.display='none';
+ const rs='position:absolute;left:10px;right:8px;font:600 11.5px Inter,Roboto,sans-serif;color:#9fd0ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+ te.innerHTML=IC.ecs.replace('class="ic"','class="ti ic"')+'<div class="tn">CHAUFFE-EAU</div><div class="ts" id="eT" style="font-size:18px;letter-spacing:.5px;color:#ffb13b">--</div><div id="eG" style="'+rs+';top:60px"></div><div id="eD" style="'+rs+';top:80px"></div>';pCt.appendChild(te);
+ let last=null;
+ const upd=()=>{try{const h=__card._hass;if(!h||!h.states)return;const S=h.states,ids=Object.keys(S);
+  const nm=id=>(id+' '+((S[id].attributes&&S[id].attributes.friendly_name)||'')).toLowerCase();
+  const ctx=/ecs|ballon|cumulus|chauffe.?eau|eau.?chaude|water.?heater|dhw|acs/,dom=/^(sensor|number|binary_sensor|switch|input_datetime|input_boolean|input_text|datetime|select|text)\\./;
+  const pick=(cfg,re,need,temp)=>{if(cfg&&S[cfg])return cfg;for(const id of ids){if(!dom.test(id))continue;const n=nm(id);if(!re.test(n))continue;if(need&&!ctx.test(n))continue;if(temp){if(!/^(sensor|number)\\./.test(id))continue;const sv=S[id].state;if(isNaN(parseFloat(sv))&&sv!=='unknown'&&sv!=='unavailable')continue;if(!(/temp|sonde|°/.test(n)||(S[id].attributes&&S[id].attributes.unit_of_measurement==='°C')))continue}return id}return ''};
+  EF.haute=pick(EC.haute,/haute|high|\\btop\\b|\\bhaut\\b/,true,true);EF.basse=pick(EC.basse,/basse|\\blow\\b|bottom|\\bbas\\b/,true,true);
+  EF.grande=pick(EC.grande,/grande.?chauffe|grand.?chauffe|boost|forc[eé]/,false,false);EF.desinf=pick(EC.desinf,/d[eé]sinfect|desinfect|l[eé]gionel|anti.?legio/,false,false);
+  EF.found=!!(EF.haute||EF.basse||EF.grande||EF.desinf);
+  const val=id=>{const s=id&&S[id];if(!s)return null;const v=s.state;return(v==='unknown'||v==='unavailable'||v==='')?null:v};
+  const fdate=v=>{if(v==null)return '--';if(/^\\d{4}-\\d\\d-\\d\\d/.test(v)){const d=new Date(v);if(!isNaN(d))return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})+(/\\d\\d:\\d\\d/.test(v)?' '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'')}return v};
+  const fst=v=>v==null?'--':({on:'EN COURS',off:'non',true:'EN COURS',false:'non'}[v]||fdate(v));
+  const fn=v=>{if(v==null)return '--';const n=parseFloat(v);return isNaN(n)?v:(Math.round(n*10)/10)+'°'};
+  const t=[];if(EF.haute)t.push('H '+fn(val(EF.haute)));if(EF.basse)t.push('B '+fn(val(EF.basse)));
+  document.getElementById('eT').textContent=t.join(' · ')||'--';
+  document.getElementById('eG').textContent=EF.grande?'Grande chauffe : '+fst(val(EF.grande)):'';
+  document.getElementById('eD').textContent=EF.desinf?'Dernière désinfection : '+fdate(val(EF.desinf)):'';
+  const k=String(EF.found);if(k!==last){last=k;layout()}}catch(e){console.error('ecs-tile',e)}};
+ setInterval(upd,3000);setTimeout(upd,800)}
+layout()}catch(e){console.error('tuiles',e)}})();`, 'tuyaux : tuiles commandes');
+  // vue Énergie : mêmes emplacements que la vue Réacteur, libellés T1…T4 comme les autres styles
+  patch("const BX=[298,446,594,742],fBat=[];", "const BX=(()=>{const B=[298,446,594,742],K=UN.every(u=>u.slot>=0&&u.slot<4)?UN.map(u=>u.slot):UN.length===1?[1]:UN.length===2?[1,2]:UN.length===3?[0,1,2]:[0,1,2,3];return K.map(k=>B[k])})(),fBat=[];", 'tuyaux : emplacements vue Énergie');
+  patch('<div class="zt">Z${i+1}</div>', '<div class="zt">T${i+1}</div>', 'tuyaux : libellés T');
+  // tuyaux lumineux et halos des machines : par emplacement → la batterie qui l'occupe (rien si emplacement vide)
+  patch("else{var p=D.p[x.k]||0;", "else{var __i=__SK.indexOf(x.k),p=__i<0?0:(D.p[__i]||0);", 'tuyaux : flux par emplacement');
+  patch("MG.forEach(function(c,i){var p=D.p[i]||0,", "MG.forEach(function(c,i){var __j=__SK.indexOf(i),p=__j<0?0:(D.p[__j]||0),", 'tuyaux : halos par emplacement');
+  patch("SPK.forEach(function(a,i){var p=D.p[i]||0,", "SPK.forEach(function(a,i){var __j=__SK.indexOf(i),p=__j<0?0:(D.p[__j]||0),", 'tuyaux : étincelles par emplacement');
+  patch("ANT.forEach(function(g,i){var p=D.p[i]||0,", "ANT.forEach(function(g,i){var __j=__SK.indexOf(i),p=__j<0?0:(D.p[__j]||0),", 'tuyaux : fourmis par emplacement');
+  patch("INS.forEach(function(I,j){var p=D.p[j]||0,", "INS.forEach(function(I,j){var __k=__SK.indexOf(j),p=__k<0?0:(D.p[__k]||0),", 'tuyaux : isolateurs par emplacement');
+  // reprises de la version HTML patchée : plusieurs plages HC, tarifs, sens des flux, min/maxi Titan, chauffage…
+  patch("hc=HC_DEBUT>HC_FIN?(h>=HC_DEBUT||h<HC_FIN):(h>=HC_DEBUT&&h<HC_FIN),price", "hc=isHC(new Date(grid[i])),price", 'tuyaux : HC (historique)');
+  patchAll("const h=new Date().getHours(),hc=HC_DEBUT>HC_FIN?(h>=HC_DEBUT||h<HC_FIN):(h>=HC_DEBUT&&h<HC_FIN);", "const h=new Date().getHours(),hc=isHC();", 'tuyaux : HC (bandeau)');
+  patch("hc=HC_DEBUT>HC_FIN?(hh>=HC_DEBUT||hh<HC_FIN):(hh>=HC_DEBUT&&hh<HC_FIN)", "hc=isHC(t)", 'tuyaux : HC (jour)');
+  patch("function hcNow(){var h=new Date().getHours();return HC_DEBUT>HC_FIN?(h>=HC_DEBUT||h<HC_FIN):(h>=HC_DEBUT&&h<HC_FIN)}", "function hcNow(){return isHC()}", 'tuyaux : HC (maintenant)');
+  patch("try{hc=HC_DEBUT>HC_FIN?(h>=HC_DEBUT||h<HC_FIN):(h>=HC_DEBUT&&h<HC_FIN)}", "try{hc=HC_MIN.some(p=>{const m=h*60;return p[0]>p[1]?(m>=p[0]||m<p[1]):(m>=p[0]&&m<p[1])})}", 'tuyaux : HC (heure)');
+  patch("('+HC_DEBUT+'h-'+HC_FIN+'h)", "('+HC_TXT+')", 'tuyaux : HC (texte)');
+  patch("*.2941))+' €');", "*TARIF_HP))+' €');", 'tuyaux : économie solaire');
+  patch("w>=0?'#2dff8a':'#ffb13b',w>=0?-1:1,sp(Math.abs(w)))}", "w>=0?'#2dff8a':'#ffb13b',w>=0?1:-1,sp(Math.abs(w)))}", 'tuyaux : sens flux batteries');
+  patch("/zendure|solarflow|hyper|shelly|solcast|marstek", "/zendure|solarflow|hyper|izypower|isypower|titan|shelly|solcast|marstek", 'tuyaux : capteurs hors ligne');
+  patch("if(s.state==='unavailable'&&off.length<30&&", "if(s.state==='unavailable'&&off.length<30&&!/solcast.*(day_?[3-7]|jour_?[3-7]|damp|amort|precis|hard_limit|limite)/i.test(id)&&", 'tuyaux : Solcast secondaires');
+  patch("if(!id.startsWith('number.')||!id.includes(pre))return;", "if(!id.startsWith('number.')||!(id.includes(pre)||/(^|[._])cluster_/.test(id)))return;", 'tuyaux : mini/maxi cluster');
+  patch("|reserve|minimum/.test(k))o.min=mk(id);", "|reserve|minimum|soc.?security/.test(k))o.min=mk(id);", 'tuyaux : mini Titan');
+  patch("else if(id.startsWith('climate.'))cli.push(", "else if(id.startsWith('climate.')&&!/room.?temperature/.test(low))cli.push(", 'tuyaux : chauffage sans doublons');
+  patch("if(/ballon|ecs|eau|ext|hyper|batt|zendure|solar|voiture|cong|frigo/i.test(n)", "if(/ballon|ecs|eau|ext|hyper|batt|izypower|isypower|titan|zendure|solar|voiture|cong|frigo/i.test(n)", 'tuyaux : température maison (1)');
+  patch("if(/ext|outdoor|dehors|ballon|ecs|eau|batt|hyper|zendure|solarflow|marstek", "if(/ext|outdoor|dehors|ballon|ecs|eau|batt|hyper|izypower|isypower|titan|zendure|solarflow|marstek", 'tuyaux : température maison (2)');
+  patch("D.ev=rd(st,E.ev);D.ecs=rd(st,E.ecs);", "D.ev=(__C.modules&&__C.modules.voiture===false)?0:rd(st,E.ev);D.ecs=(__C.modules&&__C.modules.ballon===false)?0:rd(st,E.ecs);D.p.length=D.lvl.length=D.tmp.length=UN.length;", 'tuyaux : voiture / ballon masqués');
   // son bouton plein écran : remplacé par celui de la carte (⛶ déplaçable)
   patch("if(!st||document.getElementById('fsb'))return;", "return;", 'tuyaux : plein écran');
   code = code.split("vr.textContent='VERSION_TAG'").join("vr.textContent='tuyaux'");
+}
+
+// vue « GROS » : UN n'est pas sur window → toujours 4 zones sans nom ; libellés T1… comme la vue Énergie
+if (code.includes("var n=Math.min((window.UN&&UN.length)||4,4)")) {
+  code = code.split("var n=Math.min((window.UN&&UN.length)||4,4)").join("var n=Math.min((typeof UN!=='undefined'&&UN.length)||4,4)");
+  code = code.split("'Z'+(i+1)+((window.UN&&UN[i]&&UN[i].name)?' · '+String(UN[i].name).slice(0,14):'')").join("'T'+(i+1)+((typeof UN!=='undefined'&&UN[i]&&UN[i].name)?' · '+String(UN[i].name).slice(0,14):'')");
 }
 
 if (FAILS.length) throw new Error(SRC + ' :\n' + FAILS.join('\n'));
@@ -221,5 +293,6 @@ try {
   else {
     buildMain(new URL('../src/energie.html', import.meta.url), new URL('../dist/energie-card.js', import.meta.url));
     buildClassic(new URL('../src/energie-classic.html', import.meta.url), new URL('../dist/energie-card-classic.js', import.meta.url));
+    buildClassic(new URL('../src/energie-tuyaux.html', import.meta.url), new URL('../dist/energie-card-tuyaux.js', import.meta.url), 'tuyaux', 'Tuyaux (salle de tazzdel)', 'tuyaux');
   }
 } catch (e) { console.error(e.message); process.exit(1); }
