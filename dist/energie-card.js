@@ -74,7 +74,11 @@ const BASE_CSS = `/* la carte ne doit rien hériter de la typographie de Home As
 :host(.pfs){position:relative;z-index:2147483000}
 .zh.pfs{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;height:100dvh!important;max-height:none!important;aspect-ratio:auto!important;border-radius:0!important;z-index:2147483000}
 #fsbtn{left:8px;bottom:8px}
-#autobtn{left:52px;bottom:8px}
+/* Prévisions météo (vue Réacteur) : plus compact pour que les jours tiennent en entier (émojis plus hauts sur certains appareils) */
+#lWi2{font-size:40px!important;line-height:1!important}
+#lFc{margin-top:4px!important}
+#lFc>div{padding:2px 0 3px!important;line-height:1.15!important}
+#lFc>div>div:nth-child(2){font-size:19px!important;line-height:1.2!important;height:24px;overflow:hidden}
 /* points de vue : coin bas droit, à la verticale (ne cachent plus la barre de navigation) */
 #vdots{position:absolute;right:8px;bottom:8px;z-index:60;display:flex;flex-direction:column;gap:12px;padding:10px 8px;border-radius:12px;background:rgba(5,8,15,.55)}
 #vdots i{display:block;width:11px;height:11px;border-radius:50%;background:rgba(160,200,255,.35);cursor:pointer}
@@ -182,7 +186,7 @@ const ECS_TILE=Object.assign({haute:'',basse:'',grande:'',desinf:''},__C.ecs_til
    INVERT_BAT  true si la charge/décharge est affichée à l'envers                          */
 const UN=[];
 const BATSET={};
-if(Array.isArray(__C.batteries)){__C.batteries.slice(0,4).forEach((b,i)=>{if(!b||!b.level)return;const id='b'+(UN.length+1);const io=!!(b.power_in||b.power_out);UN.push({id,name:b.name||('Batterie '+(UN.length+1)),lvl:b.level,pw:io?'':(b.power||''),pin:io?(b.power_in||''):'',pout:io?(b.power_out||''):'',tmp:b.temperature||'sensor.aucun',k:(!io&&/bat_in_out/.test(b.power||'')?-1:1)*(b.invert?-1:1)*(__C.invert_bat?-1:1)});if(b.min||b.max)BATSET[id]={min:b.min||'',max:b.max||''}})}
+if(Array.isArray(__C.batteries)){__C.batteries.slice(0,4).forEach((b,i)=>{if(!b||!b.level)return;const id='b'+(UN.length+1);const io=!!(b.power_in||b.power_out);UN.push({id,label:b.label?String(b.label).slice(0,10):'',name:b.name||('Batterie '+(UN.length+1)),lvl:b.level,pw:io?'':(b.power||''),pin:io?(b.power_in||''):'',pout:io?(b.power_out||''):'',tmp:b.temperature||'sensor.aucun',k:(!io&&/bat_in_out/.test(b.power||'')?-1:1)*(b.invert?-1:1)*(__C.invert_bat?-1:1)});if(b.min||b.max)BATSET[id]={min:b.min||'',max:b.max||''}})}
 const PACKS=Array.isArray(__C.packs)?__C.packs:[1,1,1,1];
 const KWH_PACK=__C.kwh_pack!=null?+__C.kwh_pack:2.1;
 const INVERT_BAT=!!__C.invert_bat;
@@ -404,7 +408,7 @@ const fSol=mkFlow('M292,230 C 420,230 480,215 586,215','#ffe34a',{w:8,k:'sol'});
 const fGrid=mkFlow('M604,178 C 540,160 450,160 430,118','#ff5a4a',{w:7,k:'grid'});
 const fEv=mkFlow('M676,178 C 740,160 850,160 862,118','#4de1ff',{w:7,k:'ev'});
 const fEcs=mkFlow('M694,215 L 770,215','#ff9a3b',{w:7,k:'ecs',gap:18,gap2:40});
-const BX=[0,1,2,3].map(i=>{const n=Math.max(1,Math.min(4,UN.length));return Math.round(CX-(n*142+(n-1)*6)/2+i*148)}),fBat=[];
+const BX=(()=>{const a=[0,1,2,3].map(i=>{const n=Math.max(1,Math.min(4,UN.length));return Math.round(CX-(n*142+(n-1)*6)/2+i*148)}),n=Math.max(1,Math.min(4,UN.length)),w=a[1]-a[0],last=a[n-1]+w-6,sh=Math.min(0,884-last);return a.map(x=>x+sh)})(),fBat=[];
 for(let i=0;i<UN.length&&i<4;i++){const cx=BX[i]+71,sx=CX+(cx-CX)*.22;fBat.push(mkFlow(`M${sx.toFixed(0)},266 C ${sx.toFixed(0)},296 ${cx},300 ${cx},314`,'#2dff8a',{w:6,k:'bat'+i,gap:18,gap2:40,max:1800}))}
 /* noyau */
 const core=svgEl('g',{id:'rxcore',transform:`translate(${CX} ${CY}) scale(1.34) translate(${-CX} ${-CY})`},fx);
@@ -423,7 +427,7 @@ const cGrid=card('rxgrid',330,42,200,76,'#ff5a4a',`<div class="l">Réseau</div><
 const cEv=card('rxev',752,42,223,76,'#4de1ff',`<div class="l">Voiture</div><div class="v">--</div><div class="s">--</div>${IC.ev}`,()=>ND[3].v.parentNode.click());
 const cEcs=card('rxecs',770,176,205,76,'#ff9a3b',`<div class="l">Ballon ECS</div><div class="v">--</div><div class="s">--</div>${IC.ecs}`,()=>ND[4].v.parentNode.click());
 const cZ=[];
-for(let i=0;i<UN.length&&i<4;i++){const e=card('rxz',BX[i],314,142,110,'#2dff8a',`<div class="wt"><svg class="w1" viewBox="0 0 200 12" preserveAspectRatio="none"><path d="M0 6 Q25 0 50 6 T100 6 T150 6 T200 6 V12 H0Z" fill="currentColor" fill-opacity=".62"/></svg><svg class="w2" viewBox="0 0 200 12" preserveAspectRatio="none"><path d="M0 6 Q25 12 50 6 T100 6 T150 6 T200 6 V12 H0Z" fill="currentColor" fill-opacity=".5"/></svg><i style="left:14%;width:7px;height:7px;animation-delay:0s"></i><i style="left:32%;width:10px;height:10px;animation-delay:1.2s"></i><i style="left:52%;width:6px;height:6px;animation-delay:.6s"></i><i style="left:68%;width:9px;height:9px;animation-delay:2.1s"></i><i style="left:84%;width:7px;height:7px;animation-delay:1.7s"></i></div><div class="zt">T${i+1}</div><div class="zp">--%</div><svg class="zb" viewBox="0 0 30 50"><rect x="9" y="0" width="12" height="4" rx="1.2" fill="#5b7399"/><rect x="1.5" y="4" width="27" height="44" rx="6" fill="#0a1426" stroke="#8fb0d8" stroke-width="1.6"/><clipPath id="zc${i}"><rect x="3" y="5.5" width="24" height="41" rx="4.5"/></clipPath><rect class="zf" x="3" y="30" width="24" height="16" fill="#2dff8a" clip-path="url(#zc${i})"/><path class="zbolt" d="M17 12 L9 28 H15 L13 41 L22 23 H16.5 Z" fill="#fff" opacity="0"/></svg><div class="zw">--</div>`,()=>openPanel(UN[i].name,{s:[unitP(i),unitL(i)],r:[['Puissance',(((D.p&&+D.p[i])||0)>=0?'+':'−')+Math.round(Math.abs((D.p&&+D.p[i])||0))+' W'],['Niveau',Math.round((D.lvl&&+D.lvl[i])||0)+' %']]}));e.title=UN[i].name;
+for(let i=0;i<UN.length&&i<4;i++){const e=card('rxz',BX[i],314,142,110,'#2dff8a',`<div class="wt"><svg class="w1" viewBox="0 0 200 12" preserveAspectRatio="none"><path d="M0 6 Q25 0 50 6 T100 6 T150 6 T200 6 V12 H0Z" fill="currentColor" fill-opacity=".62"/></svg><svg class="w2" viewBox="0 0 200 12" preserveAspectRatio="none"><path d="M0 6 Q25 12 50 6 T100 6 T150 6 T200 6 V12 H0Z" fill="currentColor" fill-opacity=".5"/></svg><i style="left:14%;width:7px;height:7px;animation-delay:0s"></i><i style="left:32%;width:10px;height:10px;animation-delay:1.2s"></i><i style="left:52%;width:6px;height:6px;animation-delay:.6s"></i><i style="left:68%;width:9px;height:9px;animation-delay:2.1s"></i><i style="left:84%;width:7px;height:7px;animation-delay:1.7s"></i></div><div class="zt">${(UN[i]&&UN[i].label)||'T'+(i+1)}</div><div class="zp">--%</div><svg class="zb" viewBox="0 0 30 50"><rect x="9" y="0" width="12" height="4" rx="1.2" fill="#5b7399"/><rect x="1.5" y="4" width="27" height="44" rx="6" fill="#0a1426" stroke="#8fb0d8" stroke-width="1.6"/><clipPath id="zc${i}"><rect x="3" y="5.5" width="24" height="41" rx="4.5"/></clipPath><rect class="zf" x="3" y="30" width="24" height="16" fill="#2dff8a" clip-path="url(#zc${i})"/><path class="zbolt" d="M17 12 L9 28 H15 L13 41 L22 23 H16.5 Z" fill="#fff" opacity="0"/></svg><div class="zw">--</div>`,()=>openPanel(UN[i].name,{s:[unitP(i),unitL(i)],r:[['Puissance',(((D.p&&+D.p[i])||0)>=0?'+':'−')+Math.round(Math.abs((D.p&&+D.p[i])||0))+' W'],['Niveau',Math.round((D.lvl&&+D.lvl[i])||0)+' %']]}));e.title=UN[i].name;
  cZ.push({e,wt:e.querySelector('.wt'),zp:e.querySelector('.zp'),zw:e.querySelector('.zw'),zf:e.querySelector('.zf'),zb:e.querySelector('.zbolt')})}
 const cBt=card('rxbt',890,314,86,110,'#2dff8a',`<div class="l" style="left:9px">Total</div><div class="v" style="font-size:16px;left:8px;top:30px">--</div><div class="s" style="left:9px;right:6px;bottom:7px;font-size:12px;line-height:1.15;white-space:normal">--</div>`,null);
 const grLb=svgEl('text',{x:430,y:138,'text-anchor':'middle','font-size':11,'font-weight':800,'font-family':'JetBrains Mono,monospace',fill:'#ff6a5a'},fx,'');
@@ -1817,7 +1821,7 @@ function box(id,x,y,w,h,lab){var d=document.createElement('div');d.className='bc
 function val(d,top,cls){var v=document.createElement('div');v.className='bv';v.style.top=top+'px';d.appendChild(v);var u=document.createElement('div');u.className='bu';u.style.top=(top+150)+'px';d.appendChild(u);return[v,u]}
 var bS=box('bgS',20,20,520,320,'SOLAIRE'),vS=val(bS,90),bH=box('bgH',560,20,480,320,'MAISON'),vH=val(bH,90),bG=box('bgG',1060,20,520,320,'RÉSEAU'),vG=val(bG,90);
 var n=Math.min((typeof UN!=='undefined'&&UN.length)||4,4),Z=[];
-for(var i=0;i<n;i++){(function(i){var w=(1560-(n-1)*20)/n,d=box('bgZ'+i,20+i*(w+20),360,w,440,'T'+(i+1)+((typeof UN!=='undefined'&&UN[i]&&UN[i].name)?' · '+String(UN[i].name).slice(0,14):''));
+for(var i=0;i<n;i++){(function(i){var w=(1560-(n-1)*20)/n,d=box('bgZ'+i,20+i*(w+20),360,w,440,((typeof UN!=='undefined'&&UN[i]&&UN[i].label)||'T'+(i+1))+((typeof UN!=='undefined'&&UN[i]&&UN[i].name)?' · '+String(UN[i].name).slice(0,14):''));
  d.insertAdjacentHTML('beforeend','<div class="wt"><svg class="w1" viewBox="0 0 200 12" preserveAspectRatio="none"><path d="M0 6 Q25 0 50 6 T100 6 T150 6 T200 6 V12 H0Z" fill="currentColor" fill-opacity=".8"/></svg><svg class="w2" viewBox="0 0 200 12" preserveAspectRatio="none"><path d="M0 6 Q25 12 50 6 T100 6 T150 6 T200 6 V12 H0Z" fill="currentColor" fill-opacity=".5"/></svg><i style="left:14%;width:16px;height:16px"></i><i style="left:34%;width:22px;height:22px;animation-delay:1.2s"></i><i style="left:54%;width:13px;height:13px;animation-delay:.6s"></i><i style="left:70%;width:20px;height:20px;animation-delay:2.1s"></i><i style="left:86%;width:15px;height:15px;animation-delay:1.7s"></i></div>');
  var v=document.createElement('div');v.className='bv';v.style.cssText='top:140px;font-size:138px';d.appendChild(v);var u=document.createElement('div');u.className='bu';u.style.cssText='top:320px;font-size:64px;font-weight:800';d.appendChild(u);Z.push({d:d,w:d.querySelector('.wt'),v:v,u:u})})(i)}
 var bB=box('bgB',20,820,1000,66,''),vB=document.createElement('div');vB.style.cssText='position:absolute;left:24px;top:8px;font:800 42px Inter;white-space:nowrap';bB.appendChild(vB);bB.querySelector('.bl').style.display='none';
@@ -2136,7 +2140,7 @@ class EnergieCard extends HTMLElement {
     this._fullscreen(zh, root, run);
     this._swipe(root, zh, zb);
     this._modeAuto(zh, root, run);
-    run.drag = ['vsw', 'thbtn', 'fsbtn', 'autobtn'].map(id => this._draggable(root.getElementById(id), zh, id, run)).filter(Boolean);
+    run.drag = ['vsw', 'thbtn', 'fsbtn'].map(id => this._draggable(root.getElementById(id), zh, id, run)).filter(Boolean);
   }
 
   /* bouton AUTO / MANUEL (option YAML mode_auto: input_boolean.xxx) : bascule l'entité, 2ᵉ appui pour confirmer */
@@ -2145,14 +2149,17 @@ class EnergieCard extends HTMLElement {
     const ent = typeof c === 'string' ? c : c.entity; if (!ent) return;
     const card = this, D = document;
     const b = D.createElement('button'); b.id = 'autobtn'; b.type = 'button';
-    b.style.cssText = 'position:absolute;z-index:61;height:36px;padding:0 14px;display:flex;align-items:center;gap:7px;border-radius:18px;cursor:pointer;font:800 13px Inter,Roboto,sans-serif;letter-spacing:.08em;white-space:nowrap;box-shadow:0 2px 10px rgba(0,0,0,.45);transition:background .3s,border-color .3s';
-    zh.appendChild(b);
+    // place fixe : en bas à droite du panneau « Performance du jour » (mêmes coordonnées dans les 3 styles)
+    const pf = root.getElementById('pPf');
+    b.style.cssText = 'position:absolute;z-index:61;height:42px;padding:0 18px;display:flex;align-items:center;gap:8px;border-radius:21px;cursor:pointer;font:800 16px Inter,Roboto,sans-serif;letter-spacing:.08em;white-space:nowrap;box-shadow:0 2px 10px rgba(0,0,0,.45);transition:background .3s,border-color .3s;-webkit-tap-highlight-color:transparent;' + (pf ? 'right:36px;bottom:26px' : 'left:52px;bottom:8px');
+    (pf || zh).appendChild(b);
+    const ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" style="flex:none;display:block"><path d="M12 3v8"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg>';
     let arm = 0, armT = 0;
     const paint = () => {
       const s = card._hass && card._hass.states[ent], on = s && s.state === 'on', na = !s || s.state === 'unavailable';
       const col = na ? '#7d8da3' : on ? '#2dff8a' : '#ffb13b';
       b.style.color = col; b.style.background = arm ? 'rgba(60,20,10,.92)' : 'rgba(8,18,32,.88)'; b.style.border = '1.5px solid ' + col;
-      b.innerHTML = '<span style="font-size:15px">⏻</span>' + (arm ? (on ? 'PASSER EN MANUEL ?' : 'PASSER EN AUTO ?') : na ? 'AUTO ?' : on ? 'AUTO' : 'MANUEL');
+      b.innerHTML = ICON + '<span>' + (arm ? (on ? 'MANUEL ?' : 'AUTO ?') : na ? 'AUTO ?' : on ? 'AUTO' : 'MANUEL') + '</span>';
       b.title = na ? ent + ' introuvable' : on ? 'Mode automatique : toutes les automatisations énergie sont actives' : 'Mode manuel : automatisations énergie suspendues';
     };
     b.addEventListener('click', e => {
@@ -2334,7 +2341,7 @@ const LABELS = {
   weather: 'Météo', house_temp: 'Température de la maison',
   today: 'Prévision Solcast aujourd’hui', tomorrow: 'Prévision Solcast demain',
   haute: 'Sonde haute', basse: 'Sonde basse', grande: 'Grande chauffe', desinf: 'Dernière désinfection',
-  name: 'Nom affiché', level: 'Niveau (%)', power: 'Puissance charge/décharge (W)', power_in: 'Ou : puissance entrée / charge (W)', power_out: 'Ou : puissance sortie / décharge (W)', temperature: 'Température',
+  name: 'Nom affiché', label: 'Nom court (vue Énergie, ex. T1)', level: 'Niveau (%)', power: 'Puissance charge/décharge (W)', power_in: 'Ou : puissance entrée / charge (W)', power_out: 'Ou : puissance sortie / décharge (W)', temperature: 'Température',
   min: 'Réglage du mini (number.*)', max: 'Réglage du maxi (number.*)', invert: 'Charge/décharge inversée',
   portail: 'Portail', garage: 'Porte de garage', volets: 'Volets', chauffage: 'Chauffage', scenarios: 'Scénarios',
   voiture: 'Voiture électrique', ballon: 'Ballon d’eau chaude', rappels: 'Rappels 🔔', chauffeeau: 'Tuile chauffe-eau', watt: 'Assistant Watt 👷',
@@ -2356,7 +2363,7 @@ const HELPERS = {
   power_in: 'Batteries avec deux capteurs (Zendure : output_pack_power / pack_input_power). Remplace la case du dessus.',
 };
 const bat = i => ({ type: 'expandable', name: 'bat' + i, title: 'Batterie ' + i, icon: 'mdi:battery-high', schema: [
-  { name: 'name', selector: { text: {} } }, { name: 'level', selector: SENSOR }, { name: 'power', selector: SENSOR },
+  { type: 'grid', name: '', schema: [{ name: 'name', selector: { text: {} } }, { name: 'label', selector: { text: {} } }] }, { name: 'level', selector: SENSOR }, { name: 'power', selector: SENSOR },
   { type: 'grid', name: '', schema: [{ name: 'power_in', selector: SENSOR }, { name: 'power_out', selector: SENSOR }] },
   { name: 'temperature', selector: SENSOR },
   { name: 'capacity', selector: NUM(0.001, 'kWh') },
