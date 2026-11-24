@@ -47,6 +47,7 @@ const BASE_CSS = `/* la carte ne doit rien hériter de la typographie de Home As
 :host(.pfs){position:relative;z-index:2147483000}
 .zh.pfs{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;height:100dvh!important;max-height:none!important;aspect-ratio:auto!important;border-radius:0!important;z-index:2147483000}
 #fsbtn{left:8px;bottom:8px}
+#autobtn{left:52px;bottom:8px}
 /* points de vue : coin bas droit, à la verticale (ne cachent plus la barre de navigation) */
 #vdots{position:absolute;right:8px;bottom:8px;z-index:60;display:flex;flex-direction:column;gap:12px;padding:10px 8px;border-radius:12px;background:rgba(5,8,15,.55)}
 #vdots i{display:block;width:11px;height:11px;border-radius:50%;background:rgba(160,200,255,.35);cursor:pointer}
@@ -303,7 +304,36 @@ class EnergieCard extends HTMLElement {
     // boutons flottants déplaçables (position mémorisée sur cet appareil)
     this._fullscreen(zh, root, run);
     this._swipe(root, zh, zb);
-    run.drag = ['vsw', 'thbtn', 'fsbtn'].map(id => this._draggable(root.getElementById(id), zh, id, run)).filter(Boolean);
+    this._modeAuto(zh, root, run);
+    run.drag = ['vsw', 'thbtn', 'fsbtn', 'autobtn'].map(id => this._draggable(root.getElementById(id), zh, id, run)).filter(Boolean);
+  }
+
+  /* bouton AUTO / MANUEL (option YAML mode_auto: input_boolean.xxx) : bascule l'entité, 2ᵉ appui pour confirmer */
+  _modeAuto(zh, root, run) {
+    const c = this._config.mode_auto; if (!c) return;
+    const ent = typeof c === 'string' ? c : c.entity; if (!ent) return;
+    const card = this, D = document;
+    const b = D.createElement('button'); b.id = 'autobtn'; b.type = 'button';
+    b.style.cssText = 'position:absolute;z-index:61;height:36px;padding:0 14px;display:flex;align-items:center;gap:7px;border-radius:18px;cursor:pointer;font:800 13px Inter,Roboto,sans-serif;letter-spacing:.08em;white-space:nowrap;box-shadow:0 2px 10px rgba(0,0,0,.45);transition:background .3s,border-color .3s';
+    zh.appendChild(b);
+    let arm = 0, armT = 0;
+    const paint = () => {
+      const s = card._hass && card._hass.states[ent], on = s && s.state === 'on', na = !s || s.state === 'unavailable';
+      const col = na ? '#7d8da3' : on ? '#2dff8a' : '#ffb13b';
+      b.style.color = col; b.style.background = arm ? 'rgba(60,20,10,.92)' : 'rgba(8,18,32,.88)'; b.style.border = '1.5px solid ' + col;
+      b.innerHTML = '<span style="font-size:15px">⏻</span>' + (arm ? (on ? 'PASSER EN MANUEL ?' : 'PASSER EN AUTO ?') : na ? 'AUTO ?' : on ? 'AUTO' : 'MANUEL');
+      b.title = na ? ent + ' introuvable' : on ? 'Mode automatique : toutes les automatisations énergie sont actives' : 'Mode manuel : automatisations énergie suspendues';
+    };
+    b.addEventListener('click', e => {
+      e.stopPropagation(); if (!card._hass) return;
+      if (!arm) { arm = 1; paint(); clearTimeout(armT); armT = setTimeout(() => { arm = 0; paint(); }, 3000); run.timers.add(armT); return; }
+      arm = 0; clearTimeout(armT);
+      const dom = ent.split('.')[0];
+      card._hass.callService(['input_boolean', 'switch', 'automation'].includes(dom) ? dom : 'homeassistant', 'toggle', { entity_id: ent });
+      paint();
+    });
+    const iv = setInterval(() => { if (!arm) paint(); }, 1000); run.intervals.add(iv);
+    paint();
   }
 
   /* bouton plein écran : vrai plein écran si possible, sinon la carte couvre tout l'écran de l'application (iPhone) */
@@ -351,7 +381,7 @@ class EnergieCard extends HTMLElement {
   /* écran tactile : glisser horizontalement sur le tableau pour passer d'une vue à l'autre */
   _swipe(root, zh, zb) {
     if (this._config.swipe === false) return;
-    const SKIP = 'input,textarea,select,canvas,[contenteditable],#vsw,#thbtn,#fsbtn,#hamb,#wbtn,#vdots';
+    const SKIP = 'input,textarea,select,canvas,[contenteditable],#vsw,#thbtn,#fsbtn,#autobtn,#hamb,#wbtn,#vdots';
     const OPEN = '#panel.on,#menu.on,#hist.on,#cfm.on,#hmenu.on';
     const scrollsX = el => {
       for (let e = el; e && e !== zh; e = e.parentElement) {

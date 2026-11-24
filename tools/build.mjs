@@ -259,6 +259,12 @@ layout()}catch(e){console.error('tuiles',e)}})();`, 'tuyaux : tuiles commandes')
   // panneau « Cerveau de Watt » : mise en forme absente du fichier d'origine
   { const bp = fs.readFileSync(new URL('./brain-panel.css', import.meta.url), 'utf8').split('`').join('');
     for (let i = 0; i < html.length; i++) html[i] = html[i].replace('<style id="bnCss">', '<style id="bnCss">\n' + bp + '\nbody.bn-cine #lum .lp,body.bn-cine #lCine{display:none!important}\n'); }
+  // batteries à leur réserve mini : « réserve atteinte » au lieu de « vides vers HH:MM » (Titan, Zendure : la décharge s'arrête au mini réglé)
+  patch("if(f&&f.emptyBeforeSun)L.push({k:'vide',lvl:2,t:'Batteries vides avant le matin',v:'vers '+hhmm(f.empty)})", "if(f&&f.stock<0.3)L.push({k:'vide',lvl:1,t:'Réserve des batteries atteinte',v:'mini '+MIN_PCT+' % · réseau en relais'});else if(f&&f.emptyBeforeSun)L.push({k:'vide',lvl:2,t:'Batteries vides avant le matin',v:'vers '+hhmm(f.empty)})", 'réserve : alerte');
+  patch("else if(f&&f.emptyBeforeSun)t='⚠ Batteries vides avant le soleil : économisez';", "else if(f&&f.stock<0.3)t='🔋 Réserve atteinte (mini '+MIN_PCT+' %) : le réseau prend le relais';else if(f&&f.emptyBeforeSun)t='⚠ Batteries vides avant le soleil : économisez';", 'réserve : conseil');
+  patch("let t,c;if(f.emptyBeforeSun){t='⚠ VIDES VERS '", "let t,c;if(f.stock<0.3){t='🔋 RÉSERVE ATTEINTE';c='#ffb13b'}else if(f.emptyBeforeSun){t='⚠ VIDES VERS '", 'réserve : bloc batteries');
+  patch("var au='--';if(f){if(f.empty){", "var au='--';if(f){if(f.stock<0.3)au='réserve';else if(f.empty){", 'réserve : autonomie');
+  patch("var du=st.kwh*1000/hs;r.push(['Autonomie des batteries',", "var du=st.kwh*1000/hs;if(st.kwh<0.3)r.push(['Autonomie des batteries','Les batteries ont atteint leur réserve (mini '+MIN_PCT+' %) : le réseau prend le relais.']);else r.push(['Autonomie des batteries',", 'réserve : astuces');
   // son bouton plein écran : remplacé par celui de la carte (⛶ déplaçable)
   patch("if(!st||document.getElementById('fsb'))return;", "return;", 'tuyaux : plein écran');
   code = code.split("vr.textContent='VERSION_TAG'").join("vr.textContent='tuyaux'");
@@ -270,6 +276,14 @@ if (code.includes("var n=Math.min((window.UN&&UN.length)||4,4)")) {
   code = code.split("'Z'+(i+1)+((window.UN&&UN[i]&&UN[i].name)?' · '+String(UN[i].name).slice(0,14):'')").join("'T'+(i+1)+((typeof UN!=='undefined'&&UN[i]&&UN[i].name)?' · '+String(UN[i].name).slice(0,14):'')");
 }
 
+if (MAIN) {
+  // batteries à leur réserve mini : « réserve atteinte » au lieu de « vides vers HH:MM » (Titan, Zendure : la décharge s'arrête au mini réglé)
+  patch("if(f&&f.emptyBeforeSun)L.push({k:'vide',lvl:2,t:'Batteries vides avant le matin',v:'vers '+hhmm(f.empty)})", "if(f&&f.stock<0.3)L.push({k:'vide',lvl:1,t:'Réserve des batteries atteinte',v:'mini '+MIN_PCT+' % · réseau en relais'});else if(f&&f.emptyBeforeSun)L.push({k:'vide',lvl:2,t:'Batteries vides avant le matin',v:'vers '+hhmm(f.empty)})", 'réserve : alerte');
+  patch("else if(f&&f.emptyBeforeSun)t='⚠ Batteries vides avant le soleil : économisez';", "else if(f&&f.stock<0.3)t='🔋 Réserve atteinte (mini '+MIN_PCT+' %) : le réseau prend le relais';else if(f&&f.emptyBeforeSun)t='⚠ Batteries vides avant le soleil : économisez';", 'réserve : conseil');
+  patch("let t,c;if(f.emptyBeforeSun){t='⚠ VIDES VERS '", "let t,c;if(f.stock<0.3){t='🔋 RÉSERVE ATTEINTE';c='#ffb13b'}else if(f.emptyBeforeSun){t='⚠ VIDES VERS '", 'réserve : bloc batteries');
+  patch("var au='--';if(f){if(f.empty){", "var au='--';if(f){if(f.stock<0.3)au='réserve';else if(f.empty){", 'réserve : autonomie');
+  patch("var du=st.kwh*1000/hs;r.push(['Autonomie des batteries',", "var du=st.kwh*1000/hs;if(st.kwh<0.3)r.push(['Autonomie des batteries','Les batteries ont atteint leur réserve (mini '+MIN_PCT+' %) : le réseau prend le relais.']);else r.push(['Autonomie des batteries',", 'réserve : astuces');
+}
 if (FAILS.length) throw new Error(SRC + ' :\n' + FAILS.join('\n'));
 const header = comments.map(c => '/*' + c.replace(/\*\//g, '* /') + '*/').join('\n');
 const dash = '{\nSTYLES: [\n' + stylesOut.map(s => `{id:${J(s.id)},css:${J(s.css)}}`).join(',\n') + '\n],\nHTML: [\n' + html.map(J).join(',\n') +
