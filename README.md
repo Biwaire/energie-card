@@ -90,6 +90,7 @@ Un champ laissé vide = détection automatique.
 
 ```yaml
 type: custom:energie-card
+mode_auto: input_boolean.mode_automatique_energie   # bouton ⏻ AUTO / MANUEL (YAML uniquement, 2ᵉ appui pour confirmer)
 style: classic            # classic = Classique (v2), tuyaux = salle de tazzdel ; absent = Nouveau (v2.7)
 entities:                 # '' ou absent = détection automatique
   pv: sensor.puissance_solaire        # W
@@ -199,6 +200,28 @@ Vos réglages enregistrés dans le navigateur (thème, rappels, seuils, Watt) so
 - **Charge et décharge sont inversées** : cochez « Charge/décharge inversée » pour la batterie concernée.
 - **Zendure : la puissance batterie est fausse** : beaucoup d'appareils Zendure donnent deux capteurs, un pour la charge (`output_pack_power`) et un pour la décharge (`pack_input_power`). Renseignez-les dans « Puissance entrée » et « Puissance sortie » de la batterie (la carte les détecte normalement toute seule).
 - **Le processeur travaille beaucoup quand la carte est affichée** : c'est normal, ce sont les animations (réacteur, flux, halos lumineux), comme avec la version HTML d'origine. Les animations sont limitées à 60 images/s (même sur les écrans 120/144/180 Hz), et la carte se met en pause toute seule dès qu'elle n'est plus visible (autre onglet, autre page, fenêtre réduite) : le processeur retombe alors presque à zéro.
+
+## Bouton ⏻ AUTO / MANUEL (option)
+
+Un bouton flottant pour suspendre ou réactiver d'un geste vos automatisations énergie (2ᵉ appui pour confirmer, déplaçable comme les autres boutons). Il se règle uniquement en YAML :
+
+```yaml
+mode_auto: input_boolean.mode_automatique_energie
+```
+
+Le bouton ne fait que basculer cet interrupteur. Côté Home Assistant :
+
+1. **Créer l'interrupteur** : Paramètres › Appareils et services › Entrées › Créer une entrée › **Interrupteur** (ex. « Mode automatique énergie »).
+2. **Ajouter une condition** dans chaque automatisation à piloter :
+
+```yaml
+conditions:
+  - condition: state
+    entity_id: input_boolean.mode_automatique_energie
+    state: "on"
+```
+
+En **MANUEL** (orange), ces automatisations ne se déclenchent plus ; en **AUTO** (vert), elles reprennent. Sans la ligne `mode_auto:`, le bouton n'apparaît pas.
 
 ## Crédits
 
