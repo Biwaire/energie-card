@@ -110,6 +110,7 @@ batteries:                # 4 maximum
   - name: Titan
     level: sensor.titan_pile_average            # %
     power: sensor.titan_ac_input_and_output     # W
+    label: TITAN                                # nom court sur la vue Énergie (sinon T1, T2…)
     # ou, si la batterie a deux capteurs (Zendure : charge et décharge séparées) :
     # power_in: sensor.solarflow_output_pack_power   # W entrant (charge)
     # power_out: sensor.solarflow_pack_input_power  # W sortant (décharge)
