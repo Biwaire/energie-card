@@ -47,7 +47,11 @@ const BASE_CSS = `/* la carte ne doit rien hériter de la typographie de Home As
 :host(.pfs){position:relative;z-index:2147483000}
 .zh.pfs{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;height:100dvh!important;max-height:none!important;aspect-ratio:auto!important;border-radius:0!important;z-index:2147483000}
 #fsbtn{left:8px;bottom:8px}
-#autobtn{left:52px;bottom:8px}
+/* Prévisions météo (vue Réacteur) : plus compact pour que les jours tiennent en entier (émojis plus hauts sur certains appareils) */
+#lWi2{font-size:40px!important;line-height:1!important}
+#lFc{margin-top:4px!important}
+#lFc>div{padding:2px 0 3px!important;line-height:1.15!important}
+#lFc>div>div:nth-child(2){font-size:19px!important;line-height:1.2!important;height:24px;overflow:hidden}
 /* points de vue : coin bas droit, à la verticale (ne cachent plus la barre de navigation) */
 #vdots{position:absolute;right:8px;bottom:8px;z-index:60;display:flex;flex-direction:column;gap:12px;padding:10px 8px;border-radius:12px;background:rgba(5,8,15,.55)}
 #vdots i{display:block;width:11px;height:11px;border-radius:50%;background:rgba(160,200,255,.35);cursor:pointer}
@@ -305,7 +309,7 @@ class EnergieCard extends HTMLElement {
     this._fullscreen(zh, root, run);
     this._swipe(root, zh, zb);
     this._modeAuto(zh, root, run);
-    run.drag = ['vsw', 'thbtn', 'fsbtn', 'autobtn'].map(id => this._draggable(root.getElementById(id), zh, id, run)).filter(Boolean);
+    run.drag = ['vsw', 'thbtn', 'fsbtn'].map(id => this._draggable(root.getElementById(id), zh, id, run)).filter(Boolean);
   }
 
   /* bouton AUTO / MANUEL (option YAML mode_auto: input_boolean.xxx) : bascule l'entité, 2ᵉ appui pour confirmer */
@@ -314,14 +318,17 @@ class EnergieCard extends HTMLElement {
     const ent = typeof c === 'string' ? c : c.entity; if (!ent) return;
     const card = this, D = document;
     const b = D.createElement('button'); b.id = 'autobtn'; b.type = 'button';
-    b.style.cssText = 'position:absolute;z-index:61;height:36px;padding:0 14px;display:flex;align-items:center;gap:7px;border-radius:18px;cursor:pointer;font:800 13px Inter,Roboto,sans-serif;letter-spacing:.08em;white-space:nowrap;box-shadow:0 2px 10px rgba(0,0,0,.45);transition:background .3s,border-color .3s';
-    zh.appendChild(b);
+    // place fixe : en bas à droite du panneau « Performance du jour » (mêmes coordonnées dans les 3 styles)
+    const pf = root.getElementById('pPf');
+    b.style.cssText = 'position:absolute;z-index:61;height:42px;padding:0 18px;display:flex;align-items:center;gap:8px;border-radius:21px;cursor:pointer;font:800 16px Inter,Roboto,sans-serif;letter-spacing:.08em;white-space:nowrap;box-shadow:0 2px 10px rgba(0,0,0,.45);transition:background .3s,border-color .3s;-webkit-tap-highlight-color:transparent;' + (pf ? 'right:36px;bottom:26px' : 'left:52px;bottom:8px');
+    (pf || zh).appendChild(b);
+    const ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" style="flex:none;display:block"><path d="M12 3v8"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg>';
     let arm = 0, armT = 0;
     const paint = () => {
       const s = card._hass && card._hass.states[ent], on = s && s.state === 'on', na = !s || s.state === 'unavailable';
       const col = na ? '#7d8da3' : on ? '#2dff8a' : '#ffb13b';
       b.style.color = col; b.style.background = arm ? 'rgba(60,20,10,.92)' : 'rgba(8,18,32,.88)'; b.style.border = '1.5px solid ' + col;
-      b.innerHTML = '<span style="font-size:15px">⏻</span>' + (arm ? (on ? 'PASSER EN MANUEL ?' : 'PASSER EN AUTO ?') : na ? 'AUTO ?' : on ? 'AUTO' : 'MANUEL');
+      b.innerHTML = ICON + '<span>' + (arm ? (on ? 'MANUEL ?' : 'AUTO ?') : na ? 'AUTO ?' : on ? 'AUTO' : 'MANUEL') + '</span>';
       b.title = na ? ent + ' introuvable' : on ? 'Mode automatique : toutes les automatisations énergie sont actives' : 'Mode manuel : automatisations énergie suspendues';
     };
     b.addEventListener('click', e => {
