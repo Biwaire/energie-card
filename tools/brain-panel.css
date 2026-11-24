@@ -1,0 +1,20 @@
+/* ===== panneau Cerveau de Watt ===== */
+#bnPanel{position:absolute;z-index:10050;left:50%;top:50%;transform:translate(-50%,-50%);width:820px;max-width:92%;max-height:88%;overflow:auto;box-sizing:border-box;padding:18px 22px 16px;border-radius:20px;background:linear-gradient(180deg,rgba(10,24,46,.97),rgba(5,13,28,.97));border:1.5px solid rgba(110,200,255,.6);box-shadow:0 0 40px rgba(40,150,255,.35),0 18px 50px rgba(0,0,0,.6);color:#dff1ff;font:500 15px Inter,Roboto,sans-serif;line-height:1.35;text-align:left;display:none}
+#bnPanel .x{position:absolute;right:14px;top:12px;width:36px;height:36px;border-radius:50%;border:1px solid rgba(120,200,255,.6);background:rgba(8,20,38,.9);color:#cfeaff;font:700 18px Inter,sans-serif;cursor:pointer;padding:0}
+#bnPanel .x:hover{background:rgba(40,100,170,.9)}
+#bnPanel h2{margin:0 44px 6px 0;font:800 24px 'Barlow Condensed',Inter,sans-serif;letter-spacing:1px;color:#fff}
+#bnPanel .s{font-size:13.5px;color:#9fc3e6;margin:2px 0}
+#bnPanel .s b{font-weight:800}
+#bnPanel .bnprog{height:10px;margin:10px 0 4px;border-radius:6px;background:rgba(120,180,255,.15);overflow:hidden}
+#bnPanel .bnprog i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#35d0ff,#2dff8a);box-shadow:0 0 10px #2dff8a88}
+#bnPanel canvas{display:block;width:100%;height:auto;margin:12px 0 4px;border-radius:12px;background:rgba(0,10,25,.55);border:1px solid rgba(110,200,255,.2)}
+#bnPanel .row{display:flex;gap:12px;margin-top:12px}
+#bnPanel .card{flex:1 1 0;min-width:0;padding:10px 12px;border-radius:14px;background:rgba(14,32,60,.75);border:1px solid rgba(110,200,255,.28)}
+#bnPanel .k{font:700 11px Inter,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#7fb2df}
+#bnPanel .v{font:800 26px 'Barlow Condensed',Inter,sans-serif;color:#ffc25a;margin:3px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#bnPanel ul{margin:6px 0 0;padding-left:18px}
+#bnPanel li{margin:3px 0;font-size:14px;color:#e2f1ff}
+#bnPanel label{display:inline-flex;align-items:center;gap:6px;margin-right:18px;font-size:14px;color:#cfe6ff;cursor:pointer;white-space:nowrap}
+#bnPanel input[type=checkbox]{width:18px;height:18px;accent-color:#2dff8a;cursor:pointer}
+#bnPanel.on{display:block}
+#bnC{display:none!important}
