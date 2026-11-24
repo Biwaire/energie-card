@@ -19,7 +19,7 @@
  INSTALL (EN): drop in /config/www and add an iframe card to /local/<file>.html. Sensors and storage
     batteries of any brand are auto-discovered; charge/discharge sign is auto-calibrated.
 */
-/* Style « Tuyaux (salle de tazzdel) » de la carte energie-card 1.3.1.
+/* Style « Tuyaux (salle de tazzdel) » de la carte energie-card 1.3.2.
    Chargé automatiquement par energie-card.js quand ce style est choisi :
    NE PAS l'ajouter comme ressource. */
 (window.__ENERGIE_CARD_DASH = window.__ENERGIE_CARD_DASH || {})["tuyaux"] = {
@@ -398,7 +398,7 @@ updFlux=function(dt){_uf(dt);const k=(window.__fsp||4),V=(36+0)*k*dt;
 
 function updTip(){try{const h=new Date().getHours(),hc=isHC();let t='✔ Tout va bien';const f=battForecast();
  if(D.evExt&&D.ev>1500)t='🚗 Borne publique : non comptée dans la maison';
- else if(f&&f.emptyBeforeSun)t='⚠ Batteries vides avant le soleil : économisez';
+ else if(f&&f.stock<0.3)t='🔋 Réserve atteinte (mini '+MIN_PCT+' %) : le réseau prend le relais';else if(f&&f.emptyBeforeSun)t='⚠ Batteries vides avant le soleil : économisez';
  else if(D.today>=10&&h>=9&&h<14&&D.ecs<15)t='☀ '+fr(D.today,0)+' kWh prévus : ballon ECS vers 13 h';
  else if(hc&&D.p.some((v,i)=>D.lvl[i]<MAX_PCT-2))t='🌙 Heures creuses : bon moment pour charger';
  else if(D.tomorrow&&D.tomorrow<5)t='☁ Peu de soleil demain : gardez du stock';
@@ -526,7 +526,7 @@ const LS={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:
 const ALR={list:[],seen:{},openSince:{},sound:LS.get('zsound')==='1',ctx:null};
 function beep(){try{if(!ALR.ctx)ALR.ctx=new (window.AudioContext||window.webkitAudioContext)();const c=ALR.ctx;[0,.3].forEach(t=>{const o=c.createOscillator(),g=c.createGain();o.frequency.value=880;o.connect(g);g.connect(c.destination);g.gain.setValueAtTime(.2,c.currentTime+t);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+t+.25);o.start(c.currentTime+t);o.stop(c.currentTime+t+.26)})}catch(e){}}
 function calcAlerts(){const L=[],hs=HS();
- {const f=battForecast();if(f&&f.emptyBeforeSun)L.push({k:'vide',lvl:2,t:'Batteries vides avant le matin',v:'vers '+hhmm(f.empty)})}
+ {const f=battForecast();if(f&&f.stock<0.3)L.push({k:'vide',lvl:1,t:'Réserve des batteries atteinte',v:'mini '+MIN_PCT+' % · réseau en relais'});else if(f&&f.emptyBeforeSun)L.push({k:'vide',lvl:2,t:'Batteries vides avant le matin',v:'vers '+hhmm(f.empty)})}
  UN.forEach((u,i)=>{const v=D.lvl[i];if(v!==undefined&&v!==null&&v>=0&&v<=ALERT_BAT_PCT)L.push({k:'bat'+i,lvl:v<8?3:2,t:'Batterie faible',v:u.name+' '+Math.round(v)+' %'})});
  if(D.grid>ALERT_IMPORT_W)L.push({k:'imp',lvl:2,t:'Import réseau élevé',v:fW(D.grid)});
  if(D.offline.length)L.push({k:'off',lvl:1,t:'Capteurs hors ligne',v:D.offline.length+' : '+D.offline.slice(0,2).map(o=>String(o.name).slice(0,16)).join(', ')});
@@ -622,7 +622,7 @@ function battForecast(){if(!PACKS.length||!D.lvl||!UN.length||(D.battMissing||[]
  return{stock,U,tot,avg:stock/U*100,full,empty,cons,emptyBeforeSun}}
 function updBatInfo(){const f=battForecast(),a=$('#btAvg'),fc=$('#btFc');if(!f){a.textContent='MOYENNE '+Math.round(sum(D.lvl.slice(0,UN.length))/UN.length)+' %';fc.textContent='';return}
  a.innerHTML='<b style="font-size:32px;color:#fff;text-shadow:0 0 12px #2dff8a">'+fr(f.stock,1)+'</b> / '+fr(f.U,1)+' kWh';
- let t,c;if(f.emptyBeforeSun){t='⚠ VIDES VERS '+hhmm(f.empty);c='#ff5a4a'}else if(f.full&&(!f.empty||f.full<f.empty)){t='▲ PLEINES VERS '+hhmm(f.full);c='#2dff8a'}else if(f.empty){t='▼ VIDES VERS '+hhmm(f.empty);c='#ffb13b'}else{t='✔ AUTONOMIE OK';c='#2dff8a'}
+ let t,c;if(f.stock<0.3){t='🔋 RÉSERVE ATTEINTE';c='#ffb13b'}else if(f.emptyBeforeSun){t='⚠ VIDES VERS '+hhmm(f.empty);c='#ff5a4a'}else if(f.full&&(!f.empty||f.full<f.empty)){t='▲ PLEINES VERS '+hhmm(f.full);c='#2dff8a'}else if(f.empty){t='▼ VIDES VERS '+hhmm(f.empty);c='#ffb13b'}else{t='✔ AUTONOMIE OK';c='#2dff8a'}
  fc.textContent=t;fc.style.color=c;fc.title='Estimation : conso moyenne '+Math.round(f.cons)+' W + prévision solaire du jour'}
 
 /* ===== PROFIL DE CONSOMMATION (moyenne des 7 derniers jours, heure par heure) ===== */
@@ -1030,7 +1030,7 @@ function clock(h){h=((h%24)+24)%24;return Math.floor(h)+':'+String(Math.round((h
 function analyse(){var dv=derived(),st=stock(),H=new Date().getHours()+new Date().getMinutes()/60,r=[],hs=Math.max(150,dv.house),pct=st.cap?Math.round(st.kwh/st.cap*100):0;
  var night=D.pv<150;
  /* autonomie */
- var du=st.kwh*1000/hs;r.push(['Autonomie des batteries',st.kwh.toFixed(1).replace('.',',')+' kWh utiles ('+pct+' %), au rythme de '+fW(hs)+' : '+hh(du)+', soit jusqu’à '+clock(H+du)+(night&&du<(((7-H)+24)%24)?'. Attention : pas assez pour tenir jusqu’au matin, il manquera '+((((7-H)+24)%24)*hs/1000-st.kwh).toFixed(1).replace('.',',')+' kWh.':'.')]);
+ var du=st.kwh*1000/hs;if(st.kwh<0.3)r.push(['Autonomie des batteries','Les batteries ont atteint leur réserve (mini '+MIN_PCT+' %) : le réseau prend le relais.']);else r.push(['Autonomie des batteries',st.kwh.toFixed(1).replace('.',',')+' kWh utiles ('+pct+' %), au rythme de '+fW(hs)+' : '+hh(du)+', soit jusqu’à '+clock(H+du)+(night&&du<(((7-H)+24)%24)?'. Attention : pas assez pour tenir jusqu’au matin, il manquera '+((((7-H)+24)%24)*hs/1000-st.kwh).toFixed(1).replace('.',',')+' kWh.':'.')]);
  /* pourquoi réseau */
  var why;if(D.grid>150){var lo=D.lvl.every(function(v){return v<=MIN_PCT+2});why=lo?'J’importe '+fW(D.grid)+' parce que les batteries sont au minimum ('+MIN_PCT+' %).':D.ev>=1500&&!D.evExt?'J’importe '+fW(D.grid)+' : la voiture ('+fW(D.ev)+') dépasse ce que le soleil et les batteries peuvent fournir.':D.pv<200?'J’importe '+fW(D.grid)+' : il n’y a plus de soleil et les batteries ne couvrent pas tout ('+fW(dv.house)+' de conso).':'J’importe '+fW(D.grid)+' : la maison consomme '+fW(dv.house)+' pour '+fW(D.pv)+' de soleil, les batteries ne suffisent pas à combler.'}else if(D.grid<-150){why='J’exporte '+fW(-D.grid)+' : le soleil ('+fW(D.pv)+') dépasse la maison ('+fW(dv.house)+') et les batteries ne peuvent pas tout absorber.'}else why='Je suis quasi autonome : le réseau ne fournit presque rien ('+fW(Math.abs(D.grid))+').';
  r.push(['Pourquoi le réseau ?',why]);
@@ -1280,7 +1280,7 @@ function upd(){try{
  T('lClk',String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0'));T('lDt',now.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short',year:'numeric'}));
  var bn=(dv.dis||0)-(dv.chg||0),gi=D.grid,sur,st2,cl2;if(bn>30){sur='▼ '+nW(bn);st2='Batteries → maison'+(gi>20?' + réseau '+nW(gi):'');cl2='#ffa64a'}else if(bn<-30){sur='▲ '+nW(-bn);st2='Charge batteries'+(gi>20?' (réseau)':D.pv>0?' (solaire)':'');cl2='#7dff9a'}else if(gi>30){sur='⚡ '+nW(gi);st2='Soutirage réseau';cl2='#ffd24a'}else if(gi<-30){sur='↗ '+nW(-gi);st2='Injection réseau';cl2='#3dff8a'}else{sur='● 0 W';st2='Équilibre';cl2='#9fd8ff'}T('lSur',sur);T('lSurT',st2);C('lSur',cl2);
  var r=document.getElementById('lRing');r.setAttribute('stroke-dasharray',(Math.max(0,Math.min(100,tot))/100*352).toFixed(0)+' 352');document.getElementById('lRingT').textContent=Math.round(tot)+'%';
- var f=null;try{f=battForecast()}catch(e){}var au='--';if(f){if(f.empty){var h=(f.empty-now)/3600e3;au='≈ '+Math.floor(h)+' h '+String(Math.round((h%1)*60)).padStart(2,'0')}else au='> 24 h'}T('lAut',au);
+ var f=null;try{f=battForecast()}catch(e){}var au='--';if(f){if(f.stock<0.3)au='réserve';else if(f.empty){var h=(f.empty-now)/3600e3;au='≈ '+Math.floor(h)+' h '+String(Math.round((h%1)*60)).padStart(2,'0')}else au='> 24 h'}T('lAut',au);
  T('lDpv',nK(DAY.epv||0));T('lDhs',nK(DAY.conso||0));T('lDim',nK(DAY.eimp||0));
  T('lInj',nW(gx<0?-gx:0));T('lFt',nK(D.today||0)+' kWh');var fb=document.getElementById('lFtB');if(fb)fb.style.width=Math.min(100,(DAY.epv||0)/Math.max(.1,D.today||1)*100)+'%';var tm=D.tomorrow||0;T('lFm',nK(tm)+' kWh');T('lFmS',tm<8?'☁ Journée faible':tm<15?'⛅ Journée moyenne':'☀ Belle journée');C('lFmS',tm<8?'#ffb04a':tm<15?'#ffe34a':'#7dff9a');C('lFm',tm<8?'#ffb04a':tm<15?'#ffe34a':'#7dff9a');T('lPre',nW(gx>0?gx:0));
  /* sparkline */
