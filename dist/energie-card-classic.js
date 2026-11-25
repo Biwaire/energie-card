@@ -26,7 +26,7 @@
  INSTALL (EN) — drop in /config/www, add an iframe card pointing to /local/<file>.html.
     Sensors are auto-discovered (solar, grid, Izypower Titan batteries, EV, water heater, Solcast, weather).
 */
-/* Style « Classique (v2) » de la carte energie-card 1.4.1.
+/* Style « Classique (v2) » de la carte energie-card 1.4.2.
    Chargé automatiquement par energie-card.js quand ce style est choisi :
    NE PAS l'ajouter comme ressource. */
 (window.__ENERGIE_CARD_DASH = window.__ENERGIE_CARD_DASH || {})["classic"] = {

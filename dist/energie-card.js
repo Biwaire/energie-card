@@ -28,7 +28,7 @@
 */
 /*
  ╔══════════════════════════════════════════════════════════════════════╗
- ║  ENERGIE-CARD 1.4.1 — carte Lovelace (custom:energie-card)            ║
+ ║  ENERGIE-CARD 1.4.2 — carte Lovelace (custom:energie-card)            ║
  ╚══════════════════════════════════════════════════════════════════════╝
  Installation : HACS (dépôt personnalisé, type « Tableau de bord ») ou manuelle (voir README).
  Configuration : éditeur visuel de la carte. Sans réglage, les capteurs sont détectés automatiquement.
@@ -36,7 +36,7 @@
 */
 (() => {
 'use strict';
-const TAG = 'energie-card', VERSION = '1.4.1';
+const TAG = 'energie-card', VERSION = '1.4.2';
 if (customElements.get(TAG)) return;
 console.info('%c ENERGIE-CARD %c ' + VERSION + ' ', 'color:#05080f;background:#2dff8a;font-weight:700', 'color:#2dff8a;background:#05080f');
 
@@ -2371,7 +2371,7 @@ const LABELS = {
   ev_target: 'Charge visée voiture (%)', co2_kg_kwh: 'CO₂ du réseau (kg/kWh)', agent: 'Assistant de conversation pour Watt',
 };
 const HELPERS = {
-  capacity: 'À additionner. Isypower/Izypower : Titan seul 2,1 · Link 2,1 · nouveau Link 4,032. Zendure : AB1000 0,96 · AB2000 1,92. Vide = packs × capacité d’un pack.',
+  capacity: 'À additionner. Isypower/Izypower : Titan seul 2,1 · Link 2,1 · nouveau Link 4,032. Zendure : AB1000 0,96 · AB2000 1,92 · AB3000L 2,88 · SolarFlow 2400 AC+ 2,4 (batterie intégrée). Vide = packs × capacité d’un pack.',
   kwh_pack: 'Utilisé seulement pour les batteries sans capacité indiquée (2,1 = un Titan seul)',
   brand: 'Automatique : selon les batteries détectées',
   style: 'Nouveau : vue Réacteur sombre et nette. Classique : salle des machines claire (version d’origine). Tuyaux : salle aux tuyaux bleus de tazzdel, détection de batteries toutes marques.',
