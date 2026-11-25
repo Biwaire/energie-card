@@ -2771,7 +2771,8 @@ function ghost(w,gk,now){if(gk<=0||gk>=1)return;var al=Math.min(1,gk*5)*(1-Math.
  cz.fillStyle='rgba(255,150,170,.55)';cz.beginPath();cz.ellipse(-13,-8,3.6,2.4,0,0,6.283);cz.ellipse(13,-8,3.6,2.4,0,0,6.283);cz.fill();
  cz.fillStyle='rgba(240,250,255,.96)';cz.beginPath();cz.ellipse(-24,0,6,10,.5,0,6.283);cz.ellipse(24,0,6,10,-.5,0,6.283);cz.fill();cz.restore()}
 function zap(ms){var now=performance.now();if(run)return;lastZap=now;cv.style.display='block';za.style.display='block';AP=[];run={t0:now,ms:ms||10500};document.body.classList.add('bn-zap');var A=window.__bnAPI;A&&A.think&&A.think('⚡ BZZZZT ! Les techniciens se font électriser !',1,'zap');requestAnimationFrame(tick)}
-function tick(now){if(!run)return;var a=(now-run.t0)/run.ms,T=(now-run.t0)/1000;cx.clearRect(0,0,1672,941);cz.clearRect(0,0,1672,941);
+function tick(now){try{tick0(now)}catch(e){console.error('zap',e);run=null;cv.style.display='none';za.style.display='none';document.body.classList.remove('bn-zap')}}
+function tick0(now){if(!run)return;var a=(now-run.t0)/run.ms,T=(now-run.t0)/1000;cx.clearRect(0,0,1672,941);cz.clearRect(0,0,1672,941);
  if(a>=1){run=null;cv.style.display='none';za.style.display='none';document.body.classList.remove('bn-zap');L.style.filter='';return}
  var fade=a>.88?Math.max(0,1-(a-.88)/.1):1;
  cx.globalCompositeOperation='lighter';
@@ -2999,9 +3000,12 @@ function frame(now){var dt=Math.min(.05,(now-last)/1000);last=now;T+=dt;
  if(pw>.02||P.length){requestAnimationFrame(frame)}else{run=false;cv.style.display='none'}}
 function set(v){on=!!v;if(on&&!run){run=true;cv.style.display='block';last=performance.now();requestAnimationFrame(frame)}}
 window.__bnSteam=set;
-var seen=false,since=0;setInterval(function(){try{var A=window.__bnAPI,crit=(A&&A.alerts&&A.alerts().some(function(x){return x.l>1}))||(window.__sur&&window.__sur()),za=document.getElementById('bnZa'),zv=za&&za.style.display==='block',lum=document.body.classList.contains('lum');
+window.__bnSteamForce=0;function demo(){window.__bnSteamForce=Date.now()+12000;set(true)}
+var dk=document.getElementById('bnDock');if(dk){var sb=document.createElement('button');sb.id='bnSb';sb.textContent='💨';sb.title='Tester les jets de vapeur (touche S)';sb.addEventListener('click',demo);dk.appendChild(sb)}
+document.addEventListener('keydown',function(e){if((e.key==='s'||e.key==='S')&&!/INPUT|TEXTAREA/.test((e.target||{}).tagName||''))demo()});
+var seen=false,since=0,zs=0;setInterval(function(){try{if(Date.now()<window.__bnSteamForce){set(true);return}var A=window.__bnAPI,crit=(A&&A.alerts&&A.alerts().some(function(x){return x.l>1}))||(window.__sur&&window.__sur()),za=document.getElementById('bnZa'),zv=za&&za.style.display==='block',lum=document.body.classList.contains('lum');
  if(!crit){seen=false;since=0;set(false);return}
- if(!since)since=Date.now();if(zv)seen=true;
+ if(!since)since=Date.now();if(zv){seen=true;if(!zs)zs=Date.now();if(Date.now()-zs>13000)zv=false}else zs=0;
  /* scène : électrocution d'abord, puis jets de vapeur */
  set(lum&&!zv&&!window.__bnSteamOff&&(seen||Date.now()-since>4000))}catch(e){}},500);
 }catch(e){console.error('brain6',e)}})();</script>
