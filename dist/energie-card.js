@@ -28,7 +28,7 @@
 */
 /*
  ╔══════════════════════════════════════════════════════════════════════╗
- ║  ENERGIE-CARD 1.4.0 — carte Lovelace (custom:energie-card)            ║
+ ║  ENERGIE-CARD 1.4.1 — carte Lovelace (custom:energie-card)            ║
  ╚══════════════════════════════════════════════════════════════════════╝
  Installation : HACS (dépôt personnalisé, type « Tableau de bord ») ou manuelle (voir README).
  Configuration : éditeur visuel de la carte. Sans réglage, les capteurs sont détectés automatiquement.
@@ -36,7 +36,7 @@
 */
 (() => {
 'use strict';
-const TAG = 'energie-card', VERSION = '1.4.0';
+const TAG = 'energie-card', VERSION = '1.4.1';
 if (customElements.get(TAG)) return;
 console.info('%c ENERGIE-CARD %c ' + VERSION + ' ', 'color:#05080f;background:#2dff8a;font-weight:700', 'color:#2dff8a;background:#05080f');
 
@@ -810,10 +810,10 @@ setInterval(()=>{if(MENU.open&&!MENU.drag&&!$('#cfm').classList.contains('on'))r
 /* ===== ÉCHELLE & BOUCLE ===== */
 function fit(){const s=Math.min(window.innerWidth/1600,window.innerHeight/900);const st=$('#stage');st.style.transform=`scale(${s})`;st.style.left=(window.innerWidth-1600*s)/2+'px';st.style.top=(window.innerHeight-900*s)/2+'px'}
 addEventListener('resize',fit);fit();
-let last=performance.now(),acc=0,ca=0,cs=999,cf=999;
+let last=performance.now(),acc=0,ca=9,cs=999,cf=999;
 function frame(ts){const dt=Math.min(.25,(ts-last)/1000);last=ts;
  try{acc+=dt;if(acc>.5){acc=0;const h=getHass();if(h)live(h.states);else D.live=false}
-  if(!D.live)sim(dt);updFlux(dt);ca+=dt;if(ca>1||ca===dt){ca=0;updChips();updClock();updNodes();updBats();updPerf();updWx();updCtl();updChart()}
+  if(!D.live)sim(dt);if(!document.body.classList.contains('lum'))updFlux(dt);ca+=dt;if(ca>1){ca=0;updChips();updClock();updNodes();updBats();updPerf();updWx();updCtl();updChart()}
   cs+=dt;if(cs>300||(cs>5&&!DAY.ok)){cs=0;dayStats().then(()=>{updPerf();updChart()}).catch(e=>console.error(e))}
   cf+=dt;if(cf>1800||cf>3&&!FC5.length){cf=0;loadForecast().then(updWx)}}catch(e){console.error(e)}
  requestAnimationFrame(frame)}

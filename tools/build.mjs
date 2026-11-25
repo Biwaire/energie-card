@@ -118,6 +118,11 @@ if (MAIN) patch("(k,t)=>/ac_input_and_output/.test(k)?5:/bat_in_out|battery_powe
 if (MAIN) patch("found.push({id:'b'+found.length,name:nm,lvl:i,pw,tmp", "found.push({id:'b'+found.length,_pre:pre,_sc:(/pile_average/.test(i)||/ac_input_and_output|bat_in_out/.test(pw||'')?5:(zin||zout)?4:/battery_power|pack_?power|bat_?power|battery_?(charge|discharge)/.test(pw||'')?3:1),name:nm,lvl:i,pw,pin:zin||'',pout:zout||'',tmp", 'détection : entrée/sortie');
 if (code.includes("replace(/_(electric_level|pile_average)$/,'')")) patch("replace(/_(electric_level|pile_average)$/,'')", "replace(/_(electric_level|pile_average|soc_level|battery_level|state_of_charge|soc)$/,'')", 'mini/maxi : préfixe');
 patch("const capOf=i=>(PACKS.length?", "const capOf=i=>(Array.isArray(__C.batteries)&&__C.batteries.filter(b=>b&&(b.level||b.capacity))[i]&&+__C.batteries.filter(b=>b&&(b.level||b.capacity))[i].capacity>0)?+__C.batteries.filter(b=>b&&(b.level||b.capacity))[i].capacity:(PACKS.length?", 'capacité par batterie');
+// performances : le bloc « toutes les secondes » tournait une image sur deux (ca===dt toujours vrai juste après la remise à zéro)
+patch("let last=performance.now(),acc=0,ca=0,cs=999,cf=999;", "let last=performance.now(),acc=0,ca=9,cs=999,cf=999;", 'perf : 1er passage');
+patch("ca+=dt;if(ca>1||ca===dt){ca=0;", "ca+=dt;if(ca>1){ca=0;", 'perf : mise à jour 1 fois/s');
+// performances : les flux de la vue Énergie ne sont plus animés quand la vue Réacteur est affichée
+patch("if(!D.live)sim(dt);updFlux(dt);ca+=dt;", "if(!D.live)sim(dt);if(!document.body.classList.contains('lum'))updFlux(dt);ca+=dt;", 'perf : flux Énergie en pause sur Réacteur');
 patch("const INVERT_BAT=false;", "const INVERT_BAT=!!__C.invert_bat;", 'INVERT_BAT');
 if (MAIN) patch("const TARIF_HP=0.176,TARIF_HC=0.1361;", "const TARIF_HP=__C.tarif_hp!=null?+__C.tarif_hp:0.176,TARIF_HC=__C.tarif_hc!=null?+__C.tarif_hc:0.1361;", 'TARIFS');
 if (MAIN) patchRe(/const HC_PLAGES=\[\[[^\n]*?\]\];/, "const HC_PLAGES=Array.isArray(__C.hc_plages)&&__C.hc_plages.length?__C.hc_plages:[['22:00','06:00']];", 'HC_PLAGES');

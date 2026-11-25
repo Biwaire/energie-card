@@ -19,7 +19,7 @@
  INSTALL (EN): drop in /config/www and add an iframe card to /local/<file>.html. Sensors and storage
     batteries of any brand are auto-discovered; charge/discharge sign is auto-calibrated.
 */
-/* Style « Tuyaux (salle de tazzdel) » de la carte energie-card 1.4.0.
+/* Style « Tuyaux (salle de tazzdel) » de la carte energie-card 1.4.1.
    Chargé automatiquement par energie-card.js quand ce style est choisi :
    NE PAS l'ajouter comme ressource. */
 (window.__ENERGIE_CARD_DASH = window.__ENERGIE_CARD_DASH || {})["tuyaux"] = {
@@ -776,10 +776,10 @@ setInterval(()=>{if(MENU.open&&!MENU.drag&&!$('#cfm').classList.contains('on'))r
 /* ===== ÉCHELLE & BOUCLE ===== */
 function fit(){const de=document.documentElement,W=Math.min(window.innerWidth||1e5,de.clientWidth||1e5)||1600,H=Math.min(window.innerHeight||1e5,de.clientHeight||1e5)||900;const s=Math.min(W/1600,H/900);const st=$('#stage');st.style.transform=`scale(${s})`;st.style.left=(W-1600*s)/2+'px';st.style.top=(H-900*s)/2+'px'}
 addEventListener('resize',fit);addEventListener('orientationchange',()=>{fit();setTimeout(fit,300)});document.addEventListener('fullscreenchange',()=>{fit();setTimeout(fit,300)});try{new ResizeObserver(fit).observe(document.documentElement)}catch(e){}fit();setTimeout(fit,400);setTimeout(fit,1500);
-let last=performance.now(),acc=0,ca=0,cs=999,cf=999;
+let last=performance.now(),acc=0,ca=9,cs=999,cf=999;
 function frame(ts){const dt=Math.min(.25,(ts-last)/1000);last=ts;
  try{acc+=dt;if(acc>.5){acc=0;const h=getHass();if(h)live(h.states);else D.live=false}
-  if(!D.live)sim(dt);updFlux(dt);ca+=dt;if(ca>1||ca===dt){ca=0;updChips();updClock();updNodes();updBats();updPerf();updWx();updCtl();updChart()}
+  if(!D.live)sim(dt);if(!document.body.classList.contains('lum'))updFlux(dt);ca+=dt;if(ca>1){ca=0;updChips();updClock();updNodes();updBats();updPerf();updWx();updCtl();updChart()}
   cs+=dt;if(cs>300||(cs>5&&!DAY.ok)){cs=0;dayStats().then(()=>{updPerf();updChart()}).catch(e=>console.error(e))}
   cf+=dt;if(cf>1800||cf>3&&!FC5.length){cf=0;loadForecast().then(updWx)}}catch(e){console.error(e)}
  requestAnimationFrame(frame)}
