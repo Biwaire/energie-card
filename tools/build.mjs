@@ -163,6 +163,9 @@ code += `
 
 /* ---------- style « Tuyaux » (salle de tazzdel) : son moteur batteries « toutes marques » est gardé ---------- */
 if (!MAIN) {
+// vapeur : par bouffées de 15 s après chaque électrocution, au lieu de tourner sans fin tant que la surcharge dure
+patch("if(!crit){seen=false;since=0;set(false);return}", "if(!crit){seen=false;since=0;window.__bnStT=0;set(false);return}", 'vapeur : remise à zéro');
+patch("set(lum&&!zv&&!window.__bnSteamOff&&(seen||Date.now()-since>4000))", "var __w=lum&&!zv&&!window.__bnSteamOff&&(seen||Date.now()-since>4000);if(zv)window.__bnStT=0;if(__w&&!window.__bnStT)window.__bnStT=Date.now();if(__w&&Date.now()-window.__bnStT>15000)__w=false;set(__w)", 'vapeur : bouffées de 15 s');
 // bandeau : « Réserve atteinte » au lieu de « Batteries faibles » quand on est au mini réglé (même message que le conseil de Watt)
 patch("else if(tot<MIN_PCT+8)al={c:'#ff3b3b',t:'⚠ Batteries faibles '+Math.round(tot)+' %',f:2.2};", "else if(tot<MIN_PCT+8)al=tot<=MIN_PCT+2?{c:'#ffb04a',t:'🔋 Réserve atteinte '+Math.round(tot)+' % (mini '+MIN_PCT+' %)',f:1.2}:{c:'#ff8a3b',t:'⚠ Proche de la réserve '+Math.round(tot)+' %',f:1.6};", 'bandeau réserve');
   // batteries de l'éditeur : prioritaires sur la détection automatique (pw2 = capteur de décharge séparé)

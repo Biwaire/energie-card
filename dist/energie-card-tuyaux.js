@@ -19,7 +19,7 @@
  INSTALL (EN): drop in /config/www and add an iframe card to /local/<file>.html. Sensors and storage
     batteries of any brand are auto-discovered; charge/discharge sign is auto-calibrated.
 */
-/* Style « Tuyaux (salle de tazzdel) » de la carte energie-card 1.4.3.
+/* Style « Tuyaux (salle de tazzdel) » de la carte energie-card 1.4.4.
    Chargé automatiquement par energie-card.js quand ce style est choisi :
    NE PAS l'ajouter comme ressource. */
 (window.__ENERGIE_CARD_DASH = window.__ENERGIE_CARD_DASH || {})["tuyaux"] = {
@@ -2363,10 +2363,10 @@ window.__bnSteamForce=0;function demo(){window.__bnSteamForce=Date.now()+12000;s
 var dk=document.getElementById('bnDock');if(dk){var sb=document.createElement('button');sb.id='bnSb';sb.textContent='💨';sb.title='Tester les jets de vapeur (touche S)';sb.addEventListener('click',demo);dk.appendChild(sb)}
 document.addEventListener('keydown',function(e){if((e.key==='s'||e.key==='S')&&!/INPUT|TEXTAREA/.test((e.target||{}).tagName||''))demo()});
 var seen=false,since=0,zs=0;setInterval(function(){try{if(Date.now()<window.__bnSteamForce){set(true);return}var A=window.__bnAPI,crit=(A&&A.alerts&&A.alerts().some(function(x){return x.l>1}))||(window.__sur&&window.__sur()),za=document.getElementById('bnZa'),zv=za&&za.style.display==='block',lum=document.body.classList.contains('lum');
- if(!crit){seen=false;since=0;set(false);return}
+ if(!crit){seen=false;since=0;window.__bnStT=0;set(false);return}
  if(!since)since=Date.now();if(zv){seen=true;if(!zs)zs=Date.now();if(Date.now()-zs>13000)zv=false}else zs=0;
  /* scène : électrocution d'abord, puis jets de vapeur */
- set(lum&&!zv&&!window.__bnSteamOff&&(seen||Date.now()-since>4000))}catch(e){}},500);
+ var __w=lum&&!zv&&!window.__bnSteamOff&&(seen||Date.now()-since>4000);if(zv)window.__bnStT=0;if(__w&&!window.__bnStT)window.__bnStT=Date.now();if(__w&&Date.now()-window.__bnStT>15000)__w=false;set(__w)}catch(e){}},500);
 }catch(e){console.error('brain6',e)}})();
 ;
 __H(32);
