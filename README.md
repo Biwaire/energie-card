@@ -27,6 +27,7 @@ Ce style garde le moteur de détection « toutes marques » de tazzdel (Zendure,
 - **Maison · commandes** : portail, garage, volets, chauffage et chauffe-eau selon « Éléments affichés ».
 - **Plusieurs plages d'heures creuses** prises en compte partout (coûts, bandeau, conseils).
 - Nouveautés de tazzdel : ouvriers et Watt qui réagissent, teinte jour/nuit, alerte rouge en cas de surcharge, et le **Cerveau de Watt** (bouton 🧠 : il apprend les habitudes de la maison heure par heure, score du jour, meilleur créneau, voix et sirène en option).
+- Barre de boutons sous la salle : 🧠 Cerveau de Watt (historique 7 jours, prévision de la nuit, chasse au gaspillage, rapport du soir, notifications), 🎬 Cinéma, ⚡ Zap, ❓ visite guidée, 🏆 trophées, 🎨 thèmes (Nuit rouge, Matrix, Tron, Or), 🎤 commande vocale ; voiture dans le hangar, mode tablette murale.
 
 ---
 
@@ -91,6 +92,7 @@ Un champ laissé vide = détection automatique.
 ```yaml
 type: custom:energie-card
 mode_auto: input_boolean.mode_automatique_energie   # bouton ⏻ AUTO / MANUEL (YAML uniquement, 2ᵉ appui pour confirmer)
+view_arrows: false        # ordinateur : garder le bouton Énergie/Réacteur au lieu des flèches sur le bord
 style: classic            # classic = Classique (v2), tuyaux = salle de tazzdel ; absent = Nouveau (v2.7)
 entities:                 # '' ou absent = détection automatique
   pv: sensor.puissance_solaire        # W
@@ -111,6 +113,7 @@ batteries:                # 4 maximum
     level: sensor.titan_pile_average            # %
     power: sensor.titan_ac_input_and_output     # W
     label: TITAN                                # nom court sur la vue Énergie (sinon T1, T2…)
+    # hide_power: true                         # masquer les watts (ex. extension LINK sans capteur de puissance)
     # ou, si la batterie a deux capteurs (Zendure : charge et décharge séparées) :
     # power_in: sensor.solarflow_output_pack_power   # W entrant (charge)
     # power_out: sensor.solarflow_pack_input_power  # W sortant (décharge)
