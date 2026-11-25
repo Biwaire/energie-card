@@ -163,6 +163,9 @@ code += `
 
 /* ---------- style « Tuyaux » (salle de tazzdel) : son moteur batteries « toutes marques » est gardé ---------- */
 if (!MAIN) {
+// cerveau : dans la carte, les réglages (tarifs, mini %, kWh par pack) ne sont pas globaux -> « économie ≈ NaN € »
+patch(`var G=function(n,d){try{return (new Function('return typeof '+n+'!=="undefined"?'+n+':undefined'))()}catch(e){}return d};`, `var G=function(n,d){var v;try{v={TARIF_HC:typeof TARIF_HC!=='undefined'?TARIF_HC:void 0,TARIF_HP:typeof TARIF_HP!=='undefined'?TARIF_HP:void 0,KWH_PACK:typeof KWH_PACK!=='undefined'?KWH_PACK:void 0,MIN_PCT:typeof MIN_PCT!=='undefined'?MIN_PCT:void 0}[n]}catch(e){}if(v===void 0)try{v=(new Function('return typeof '+n+'!=="undefined"?'+n+':undefined'))()}catch(e){}return (typeof v==='number'&&isFinite(v))?v:d};`, 'cerveau : réglages');
+patch("B.kwh.saved+=Math.max(0,x-Math.max(0,D.grid))*dt/1000*pr;", "if(!isFinite(B.kwh.saved))B.kwh.saved=0;B.kwh.saved+=Math.max(0,x-Math.max(0,D.grid))*dt/1000*pr;", 'cerveau : économie NaN');
 // vapeur : par bouffées de 15 s après chaque électrocution, au lieu de tourner sans fin tant que la surcharge dure
 patch("if(!crit){seen=false;since=0;set(false);return}", "if(!crit){seen=false;since=0;window.__bnStT=0;set(false);return}", 'vapeur : remise à zéro');
 patch("set(lum&&!zv&&!window.__bnSteamOff&&(seen||Date.now()-since>4000))", "var __w=lum&&!zv&&!window.__bnSteamOff&&(seen||Date.now()-since>4000);if(zv)window.__bnStT=0;if(__w&&!window.__bnStT)window.__bnStT=Date.now();if(__w&&Date.now()-window.__bnStT>15000)__w=false;set(__w)", 'vapeur : bouffées de 15 s');

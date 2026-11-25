@@ -19,7 +19,7 @@
  INSTALL (EN): drop in /config/www and add an iframe card to /local/<file>.html. Sensors and storage
     batteries of any brand are auto-discovered; charge/discharge sign is auto-calibrated.
 */
-/* Style « Tuyaux (salle de tazzdel) » de la carte energie-card 1.4.4.
+/* Style « Tuyaux (salle de tazzdel) » de la carte energie-card 1.4.5.
    Chargé automatiquement par energie-card.js quand ce style est choisi :
    NE PAS l'ajouter comme ressource. */
 (window.__ENERGIE_CARD_DASH = window.__ENERGIE_CARD_DASH || {})["tuyaux"] = {
@@ -1848,7 +1848,7 @@ __H(26);
 (function(){try{
 var st=document.getElementById('stage'),L=document.getElementById('lum');if(!st||!L||window.__bn)return;window.__bn=1;
 var LS=function(k,v){try{if(v===undefined)return JSON.parse(localStorage.getItem(k)||'null');localStorage.setItem(k,JSON.stringify(v))}catch(e){return null}};
-var G=function(n,d){try{return (new Function('return typeof '+n+'!=="undefined"?'+n+':undefined'))()}catch(e){}return d};
+var G=function(n,d){var v;try{v={TARIF_HC:typeof TARIF_HC!=='undefined'?TARIF_HC:void 0,TARIF_HP:typeof TARIF_HP!=='undefined'?TARIF_HP:void 0,KWH_PACK:typeof KWH_PACK!=='undefined'?KWH_PACK:void 0,MIN_PCT:typeof MIN_PCT!=='undefined'?MIN_PCT:void 0}[n]}catch(e){}if(v===void 0)try{v=(new Function('return typeof '+n+'!=="undefined"?'+n+':undefined'))()}catch(e){}return (typeof v==='number'&&isFinite(v))?v:d};
 var B=LS('rx-brain')||{prof:new Array(24).fill(0),n:new Array(24).fill(0),day:'',kwh:{pv:0,imp:0,exp:0,house:0,saved:0},tot:0,opt:{voice:false,siren:false,thoughts:true}};
 if(!B.opt)B.opt={voice:false,siren:false,thoughts:true};
 var el=function(t,id,c,h,p){var e=document.createElement(t);if(id)e.id=id;if(c)e.className=c;if(h!=null)e.innerHTML=h;(p||st).appendChild(e);return e};
@@ -1923,7 +1923,7 @@ function learn(){var d=new Date(),h=d.getHours(),k=d.getFullYear()+'-'+(d.getMon
  if(!D.live)return;var x=dv().house;B.n[h]++;var a=Math.max(.02,1/B.n[h]);B.prof[h]+=(x-B.prof[h])*a;B.tot++;
  var dt=30/3600,hc=false;try{hc=HC_MIN.some(p=>{const m=h*60;return p[0]>p[1]?(m>=p[0]||m<p[1]):(m>=p[0]&&m<p[1])})}catch(e){}var pr=hc?G('TARIF_HC',.23):G('TARIF_HP',.29);
  B.kwh.pv+=D.pv*dt/1000;B.kwh.house+=x*dt/1000;if(D.grid>0)B.kwh.imp+=D.grid*dt/1000;else B.kwh.exp+=-D.grid*dt/1000;
- B.kwh.saved+=Math.max(0,x-Math.max(0,D.grid))*dt/1000*pr;LS('rx-brain',B)}
+ if(!isFinite(B.kwh.saved))B.kwh.saved=0;B.kwh.saved+=Math.max(0,x-Math.max(0,D.grid))*dt/1000*pr;LS('rx-brain',B)}
 function level(){var n=B.tot;var L2=[[0,'Nouveau-né'],[60,'Apprenti'],[600,'Éveillé'],[3000,'Expert'],[9000,'Génie']],i=0;while(i<L2.length-1&&n>=L2[i+1][0])i++;return{i:i+1,name:L2[i][1],pct:Math.min(100,Math.round(100*B.n.filter(function(c){return c>=20}).length/24))}}
 function stored(){var n=UN.length,kw=G('KWH_PACK',1.96),mn=G('MIN_PCT',10);var s=0;for(var i=0;i<n;i++)s+=Math.max(0,(D.lvl[i]||0)-mn)/100*kw;return s*1000}
 function autonomy(){/* heures simulées avec le profil appris jusqu'au lever du soleil */

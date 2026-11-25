@@ -28,7 +28,7 @@
 */
 /*
  ╔══════════════════════════════════════════════════════════════════════╗
- ║  ENERGIE-CARD 1.4.4 — carte Lovelace (custom:energie-card)            ║
+ ║  ENERGIE-CARD 1.4.5 — carte Lovelace (custom:energie-card)            ║
  ╚══════════════════════════════════════════════════════════════════════╝
  Installation : HACS (dépôt personnalisé, type « Tableau de bord ») ou manuelle (voir README).
  Configuration : éditeur visuel de la carte. Sans réglage, les capteurs sont détectés automatiquement.
@@ -36,7 +36,7 @@
 */
 (() => {
 'use strict';
-const TAG = 'energie-card', VERSION = '1.4.4';
+const TAG = 'energie-card', VERSION = '1.4.5';
 if (customElements.get(TAG)) return;
 console.info('%c ENERGIE-CARD %c ' + VERSION + ' ', 'color:#05080f;background:#2dff8a;font-weight:700', 'color:#2dff8a;background:#05080f');
 
