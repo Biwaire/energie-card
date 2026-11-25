@@ -26,7 +26,7 @@
  INSTALL (EN) — drop in /config/www, add an iframe card pointing to /local/<file>.html.
     Sensors are auto-discovered (solar, grid, Izypower Titan batteries, EV, water heater, Solcast, weather).
 */
-/* Style « Classique (v2) » de la carte energie-card 1.3.2.
+/* Style « Classique (v2) » de la carte energie-card 1.4.0.
    Chargé automatiquement par energie-card.js quand ce style est choisi :
    NE PAS l'ajouter comme ressource. */
 (window.__ENERGIE_CARD_DASH = window.__ENERGIE_CARD_DASH || {})["classic"] = {
@@ -116,7 +116,7 @@ const ECS_TILE=Object.assign({haute:'',basse:'',grande:'',desinf:''},__C.ecs_til
    INVERT_BAT  true si la charge/décharge est affichée à l'envers                          */
 const UN=[];
 const BATSET={};
-if(Array.isArray(__C.batteries)){__C.batteries.slice(0,4).forEach((b,i)=>{if(!b||!b.level)return;const id='b'+(UN.length+1);const io=!!(b.power_in||b.power_out);UN.push({id,label:b.label?String(b.label).slice(0,10):'',name:b.name||('Batterie '+(UN.length+1)),lvl:b.level,pw:io?'':(b.power||''),pin:io?(b.power_in||''):'',pout:io?(b.power_out||''):'',tmp:b.temperature||'sensor.aucun',k:(!io&&/bat_in_out/.test(b.power||'')?-1:1)*(b.invert?-1:1)*(__C.invert_bat?-1:1)});if(b.min||b.max)BATSET[id]={min:b.min||'',max:b.max||''}})}
+if(Array.isArray(__C.batteries)){__C.batteries.slice(0,4).forEach((b,i)=>{if(!b||!b.level)return;const id='b'+(UN.length+1);const io=!!(b.power_in||b.power_out);UN.push({id,hp:!!b.hide_power,label:b.label?String(b.label).slice(0,10):'',name:b.name||('Batterie '+(UN.length+1)),lvl:b.level,pw:io?'':(b.power||''),pin:io?(b.power_in||''):'',pout:io?(b.power_out||''):'',tmp:b.temperature||'sensor.aucun',k:(!io&&/bat_in_out/.test(b.power||'')?-1:1)*(b.invert?-1:1)*(__C.invert_bat?-1:1)});if(b.min||b.max)BATSET[id]={min:b.min||'',max:b.max||''}})}
 const PACKS=Array.isArray(__C.packs)?__C.packs:[1,1,1,1];
 const KWH_PACK=__C.kwh_pack!=null?+__C.kwh_pack:2.1;
 const INVERT_BAT=!!__C.invert_bat;
@@ -345,6 +345,7 @@ const cEcs=card('rxecs',770,176,205,76,'#ff9a3b',`<div class="l">Ballon ECS</div
 const cZ=[];
 for(let i=0;i<UN.length&&i<4;i++){const e=card('rxz',BX[i],330,92,94,'#2dff8a',`<div class="zt">${(UN[i]&&UN[i].label)||'T'+(i+1)}</div><div class="zp">--%</div><svg class="zb" viewBox="0 0 30 50"><rect x="9" y="0" width="12" height="4" rx="1.2" fill="#5b7399"/><rect x="1.5" y="4" width="27" height="44" rx="6" fill="#0a1426" stroke="#8fb0d8" stroke-width="1.6"/><clipPath id="zc${i}"><rect x="3" y="5.5" width="24" height="41" rx="4.5"/></clipPath><rect class="zf" x="3" y="30" width="24" height="16" fill="#2dff8a" clip-path="url(#zc${i})"/><path class="zbolt" d="M17 12 L9 28 H15 L13 41 L22 23 H16.5 Z" fill="#fff" opacity="0"/></svg><div class="zw">--</div>`,()=>openPanel(UN[i].name,{s:[unitP(i),unitL(i)],r:[['Puissance',(((D.p&&+D.p[i])||0)>=0?'+':'−')+Math.round(Math.abs((D.p&&+D.p[i])||0))+' W'],['Niveau',Math.round((D.lvl&&+D.lvl[i])||0)+' %']]}));e.title=UN[i].name;
  cZ.push({e,zp:e.querySelector('.zp'),zw:e.querySelector('.zw'),zf:e.querySelector('.zf'),zb:e.querySelector('.zbolt')})}
+try{const __hp=UN.map((u,i)=>u.hp?i:-1).filter(i=>i>=0);if(__hp.length){const __s=document.createElement('style');__s.textContent=__hp.map(i=>'#bw'+i+',#lbw'+i+'{visibility:hidden!important}#lZd>div:nth-child('+(i+1)+'){display:none!important}').join('');document.head.appendChild(__s);__hp.forEach(i=>{if(cZ[i]&&cZ[i].zw)cZ[i].zw.style.visibility='hidden'})}}catch(e){}
 const cBt=card('rxbt',864,330,111,94,'#2dff8a',`<div class="l" style="left:12px">Batteries</div><div class="v" style="font-size:21px;left:12px;top:27px">--</div><div class="s" style="left:12px;bottom:9px;font-size:11px">--</div>`,null);
 const grLb=svgEl('text',{x:430,y:138,'text-anchor':'middle','font-size':11,'font-weight':800,'font-family':'JetBrains Mono,monospace',fill:'#ff6a5a'},fx,'');
 /* mise à jour */

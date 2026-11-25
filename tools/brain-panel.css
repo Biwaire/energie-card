@@ -17,4 +17,3 @@
 #bnPanel label{display:inline-flex;align-items:center;gap:6px;margin-right:18px;font-size:14px;color:#cfe6ff;cursor:pointer;white-space:nowrap}
 #bnPanel input[type=checkbox]{width:18px;height:18px;accent-color:#2dff8a;cursor:pointer}
 #bnPanel.on{display:block}
-#bnC{display:none!important}

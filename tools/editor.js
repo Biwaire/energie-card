@@ -15,7 +15,7 @@ const LABELS = {
   today: 'Prévision Solcast aujourd’hui', tomorrow: 'Prévision Solcast demain',
   haute: 'Sonde haute', basse: 'Sonde basse', grande: 'Grande chauffe', desinf: 'Dernière désinfection',
   name: 'Nom affiché', label: 'Nom court (vue Énergie, ex. T1)', level: 'Niveau (%)', power: 'Puissance charge/décharge (W)', power_in: 'Ou : puissance entrée / charge (W)', power_out: 'Ou : puissance sortie / décharge (W)', temperature: 'Température',
-  min: 'Réglage du mini (number.*)', max: 'Réglage du maxi (number.*)', invert: 'Charge/décharge inversée',
+  min: 'Réglage du mini (number.*)', max: 'Réglage du maxi (number.*)', invert: 'Charge/décharge inversée', hide_power: 'Masquer les watts (ex. extension LINK sans capteur)',
   portail: 'Portail', garage: 'Porte de garage', volets: 'Volets', chauffage: 'Chauffage', scenarios: 'Scénarios',
   voiture: 'Voiture électrique', ballon: 'Ballon d’eau chaude', rappels: 'Rappels 🔔', chauffeeau: 'Tuile chauffe-eau', watt: 'Assistant Watt 👷',
   tarif_hp: 'Prix heures pleines (€/kWh)', tarif_hc: 'Prix heures creuses (€/kWh)', hc_text: 'Heures creuses',
@@ -41,7 +41,7 @@ const bat = i => ({ type: 'expandable', name: 'bat' + i, title: 'Batterie ' + i,
   { name: 'temperature', selector: SENSOR },
   { name: 'capacity', selector: NUM(0.001, 'kWh') },
   { type: 'grid', name: '', schema: [{ name: 'min', selector: ENT('number') }, { name: 'max', selector: ENT('number') }] },
-  { name: 'invert', selector: { boolean: {} } }] });
+  { name: 'invert', selector: { boolean: {} } }, { name: 'hide_power', selector: { boolean: {} } }] });
 const NUM = (step, unit) => ({ number: { mode: 'box', step, unit_of_measurement: unit } });
 const SCHEMA = [
   { name: 'style', selector: { select: { mode: 'dropdown', options: [

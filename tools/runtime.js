@@ -56,6 +56,10 @@ const BASE_CSS = `/* la carte ne doit rien hériter de la typographie de Home As
 #vdots{position:absolute;right:8px;bottom:8px;z-index:60;display:flex;flex-direction:column;gap:12px;padding:10px 8px;border-radius:12px;background:rgba(5,8,15,.55)}
 #vdots i{display:block;width:11px;height:11px;border-radius:50%;background:rgba(160,200,255,.35);cursor:pointer}
 #vdots i.on{background:#4de1ff;box-shadow:0 0 6px #4de1ff}
+#varrow{position:absolute;top:50%;transform:translateY(-50%);z-index:60;width:38px;height:84px;display:flex;align-items:center;justify-content:center;padding:0;border:1px solid rgba(120,210,255,.35);background:rgba(5,12,26,.45);color:#bfe9ff;cursor:pointer;opacity:.55;transition:opacity .2s,background .2s;-webkit-tap-highlight-color:transparent}
+#varrow:hover{opacity:1;background:rgba(10,40,80,.8)}
+#varrow.r{right:0;border-radius:14px 0 0 14px;border-right:none}
+#varrow.l{left:0;border-radius:0 14px 14px 0;border-left:none}
 #fsbtn svg{width:20px;height:20px;pointer-events:none}`;
 
 function rwCss(css) {
@@ -388,7 +392,7 @@ class EnergieCard extends HTMLElement {
   /* écran tactile : glisser horizontalement sur le tableau pour passer d'une vue à l'autre */
   _swipe(root, zh, zb) {
     if (this._config.swipe === false) return;
-    const SKIP = 'input,textarea,select,canvas,[contenteditable],#vsw,#thbtn,#fsbtn,#autobtn,#hamb,#wbtn,#vdots';
+    const SKIP = 'input,textarea,select,canvas,[contenteditable],#vsw,#varrow,#thbtn,#fsbtn,#autobtn,#hamb,#wbtn,#vdots';
     const OPEN = '#panel.on,#menu.on,#hist.on,#cfm.on,#hmenu.on';
     const scrollsX = el => {
       for (let e = el; e && e !== zh; e = e.parentElement) {
@@ -416,6 +420,21 @@ class EnergieCard extends HTMLElement {
       zh.appendChild(dots);
       const upd = () => { const l = zb.classList.contains('lum'); dots.children[0].classList.toggle('on', !l); dots.children[1].classList.toggle('on', l); };
       dots.addEventListener('click', e => { const v = e.target.dataset && e.target.dataset.v; const b = v && root.querySelector('#vsw button[data-v="' + v + '"]'); if (b) b.click(); });
+      new MutationObserver(upd).observe(zb, { attributes: true, attributeFilter: ['class'] });
+      upd();
+    } else if (this._config.view_arrows !== false) {
+      // ordinateur : une flèche sur le bord (→ à droite sur Énergie, ← à gauche sur Réacteur) remplace le bouton Énergie/Réacteur
+      const vsw = root.getElementById('vsw');
+      if (vsw) vsw.style.setProperty('display', 'none', 'important');
+      const ar = document.createElement('button'); ar.id = 'varrow'; ar.type = 'button';
+      zh.appendChild(ar);
+      const upd = () => {
+        const l = zb.classList.contains('lum');
+        ar.classList.toggle('l', l); ar.classList.toggle('r', !l);
+        ar.innerHTML = '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="' + (l ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7') + '"/></svg>';
+        ar.title = l ? '⚡ Énergie' : '⚛ Réacteur';
+      };
+      ar.addEventListener('click', e => { e.stopPropagation(); const l = zb.classList.contains('lum'); const b = root.querySelector('#vsw button[data-v="' + (l ? '0' : '1') + '"]'); if (b) b.click(); });
       new MutationObserver(upd).observe(zb, { attributes: true, attributeFilter: ['class'] });
       upd();
     }

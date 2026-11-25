@@ -28,7 +28,7 @@
 */
 /*
  ╔══════════════════════════════════════════════════════════════════════╗
- ║  ENERGIE-CARD 1.3.2 — carte Lovelace (custom:energie-card)            ║
+ ║  ENERGIE-CARD 1.4.0 — carte Lovelace (custom:energie-card)            ║
  ╚══════════════════════════════════════════════════════════════════════╝
  Installation : HACS (dépôt personnalisé, type « Tableau de bord ») ou manuelle (voir README).
  Configuration : éditeur visuel de la carte. Sans réglage, les capteurs sont détectés automatiquement.
@@ -36,7 +36,7 @@
 */
 (() => {
 'use strict';
-const TAG = 'energie-card', VERSION = '1.3.2';
+const TAG = 'energie-card', VERSION = '1.4.0';
 if (customElements.get(TAG)) return;
 console.info('%c ENERGIE-CARD %c ' + VERSION + ' ', 'color:#05080f;background:#2dff8a;font-weight:700', 'color:#2dff8a;background:#05080f');
 
@@ -83,6 +83,10 @@ const BASE_CSS = `/* la carte ne doit rien hériter de la typographie de Home As
 #vdots{position:absolute;right:8px;bottom:8px;z-index:60;display:flex;flex-direction:column;gap:12px;padding:10px 8px;border-radius:12px;background:rgba(5,8,15,.55)}
 #vdots i{display:block;width:11px;height:11px;border-radius:50%;background:rgba(160,200,255,.35);cursor:pointer}
 #vdots i.on{background:#4de1ff;box-shadow:0 0 6px #4de1ff}
+#varrow{position:absolute;top:50%;transform:translateY(-50%);z-index:60;width:38px;height:84px;display:flex;align-items:center;justify-content:center;padding:0;border:1px solid rgba(120,210,255,.35);background:rgba(5,12,26,.45);color:#bfe9ff;cursor:pointer;opacity:.55;transition:opacity .2s,background .2s;-webkit-tap-highlight-color:transparent}
+#varrow:hover{opacity:1;background:rgba(10,40,80,.8)}
+#varrow.r{right:0;border-radius:14px 0 0 14px;border-right:none}
+#varrow.l{left:0;border-radius:0 14px 14px 0;border-left:none}
 #fsbtn svg{width:20px;height:20px;pointer-events:none}`;
 
 function rwCss(css) {
@@ -186,7 +190,7 @@ const ECS_TILE=Object.assign({haute:'',basse:'',grande:'',desinf:''},__C.ecs_til
    INVERT_BAT  true si la charge/décharge est affichée à l'envers                          */
 const UN=[];
 const BATSET={};
-if(Array.isArray(__C.batteries)){__C.batteries.slice(0,4).forEach((b,i)=>{if(!b||!b.level)return;const id='b'+(UN.length+1);const io=!!(b.power_in||b.power_out);UN.push({id,label:b.label?String(b.label).slice(0,10):'',name:b.name||('Batterie '+(UN.length+1)),lvl:b.level,pw:io?'':(b.power||''),pin:io?(b.power_in||''):'',pout:io?(b.power_out||''):'',tmp:b.temperature||'sensor.aucun',k:(!io&&/bat_in_out/.test(b.power||'')?-1:1)*(b.invert?-1:1)*(__C.invert_bat?-1:1)});if(b.min||b.max)BATSET[id]={min:b.min||'',max:b.max||''}})}
+if(Array.isArray(__C.batteries)){__C.batteries.slice(0,4).forEach((b,i)=>{if(!b||!b.level)return;const id='b'+(UN.length+1);const io=!!(b.power_in||b.power_out);UN.push({id,hp:!!b.hide_power,label:b.label?String(b.label).slice(0,10):'',name:b.name||('Batterie '+(UN.length+1)),lvl:b.level,pw:io?'':(b.power||''),pin:io?(b.power_in||''):'',pout:io?(b.power_out||''):'',tmp:b.temperature||'sensor.aucun',k:(!io&&/bat_in_out/.test(b.power||'')?-1:1)*(b.invert?-1:1)*(__C.invert_bat?-1:1)});if(b.min||b.max)BATSET[id]={min:b.min||'',max:b.max||''}})}
 const PACKS=Array.isArray(__C.packs)?__C.packs:[1,1,1,1];
 const KWH_PACK=__C.kwh_pack!=null?+__C.kwh_pack:2.1;
 const INVERT_BAT=!!__C.invert_bat;
@@ -429,6 +433,7 @@ const cEcs=card('rxecs',770,176,205,76,'#ff9a3b',`<div class="l">Ballon ECS</div
 const cZ=[];
 for(let i=0;i<UN.length&&i<4;i++){const e=card('rxz',BX[i],314,142,110,'#2dff8a',`<div class="wt"><svg class="w1" viewBox="0 0 200 12" preserveAspectRatio="none"><path d="M0 6 Q25 0 50 6 T100 6 T150 6 T200 6 V12 H0Z" fill="currentColor" fill-opacity=".62"/></svg><svg class="w2" viewBox="0 0 200 12" preserveAspectRatio="none"><path d="M0 6 Q25 12 50 6 T100 6 T150 6 T200 6 V12 H0Z" fill="currentColor" fill-opacity=".5"/></svg><i style="left:14%;width:7px;height:7px;animation-delay:0s"></i><i style="left:32%;width:10px;height:10px;animation-delay:1.2s"></i><i style="left:52%;width:6px;height:6px;animation-delay:.6s"></i><i style="left:68%;width:9px;height:9px;animation-delay:2.1s"></i><i style="left:84%;width:7px;height:7px;animation-delay:1.7s"></i></div><div class="zt">${(UN[i]&&UN[i].label)||'T'+(i+1)}</div><div class="zp">--%</div><svg class="zb" viewBox="0 0 30 50"><rect x="9" y="0" width="12" height="4" rx="1.2" fill="#5b7399"/><rect x="1.5" y="4" width="27" height="44" rx="6" fill="#0a1426" stroke="#8fb0d8" stroke-width="1.6"/><clipPath id="zc${i}"><rect x="3" y="5.5" width="24" height="41" rx="4.5"/></clipPath><rect class="zf" x="3" y="30" width="24" height="16" fill="#2dff8a" clip-path="url(#zc${i})"/><path class="zbolt" d="M17 12 L9 28 H15 L13 41 L22 23 H16.5 Z" fill="#fff" opacity="0"/></svg><div class="zw">--</div>`,()=>openPanel(UN[i].name,{s:[unitP(i),unitL(i)],r:[['Puissance',(((D.p&&+D.p[i])||0)>=0?'+':'−')+Math.round(Math.abs((D.p&&+D.p[i])||0))+' W'],['Niveau',Math.round((D.lvl&&+D.lvl[i])||0)+' %']]}));e.title=UN[i].name;
  cZ.push({e,wt:e.querySelector('.wt'),zp:e.querySelector('.zp'),zw:e.querySelector('.zw'),zf:e.querySelector('.zf'),zb:e.querySelector('.zbolt')})}
+try{const __hp=UN.map((u,i)=>u.hp?i:-1).filter(i=>i>=0);if(__hp.length){const __s=document.createElement('style');__s.textContent=__hp.map(i=>'#bw'+i+',#lbw'+i+'{visibility:hidden!important}#lZd>div:nth-child('+(i+1)+'){display:none!important}').join('');document.head.appendChild(__s);__hp.forEach(i=>{if(cZ[i]&&cZ[i].zw)cZ[i].zw.style.visibility='hidden'})}}catch(e){}
 const cBt=card('rxbt',890,314,86,110,'#2dff8a',`<div class="l" style="left:9px">Total</div><div class="v" style="font-size:16px;left:8px;top:30px">--</div><div class="s" style="left:9px;right:6px;bottom:7px;font-size:12px;line-height:1.15;white-space:normal">--</div>`,null);
 const grLb=svgEl('text',{x:430,y:138,'text-anchor':'middle','font-size':11,'font-weight':800,'font-family':'JetBrains Mono,monospace',fill:'#ff6a5a'},fx,'');
 /* mise à jour */
@@ -2219,7 +2224,7 @@ class EnergieCard extends HTMLElement {
   /* écran tactile : glisser horizontalement sur le tableau pour passer d'une vue à l'autre */
   _swipe(root, zh, zb) {
     if (this._config.swipe === false) return;
-    const SKIP = 'input,textarea,select,canvas,[contenteditable],#vsw,#thbtn,#fsbtn,#autobtn,#hamb,#wbtn,#vdots';
+    const SKIP = 'input,textarea,select,canvas,[contenteditable],#vsw,#varrow,#thbtn,#fsbtn,#autobtn,#hamb,#wbtn,#vdots';
     const OPEN = '#panel.on,#menu.on,#hist.on,#cfm.on,#hmenu.on';
     const scrollsX = el => {
       for (let e = el; e && e !== zh; e = e.parentElement) {
@@ -2247,6 +2252,21 @@ class EnergieCard extends HTMLElement {
       zh.appendChild(dots);
       const upd = () => { const l = zb.classList.contains('lum'); dots.children[0].classList.toggle('on', !l); dots.children[1].classList.toggle('on', l); };
       dots.addEventListener('click', e => { const v = e.target.dataset && e.target.dataset.v; const b = v && root.querySelector('#vsw button[data-v="' + v + '"]'); if (b) b.click(); });
+      new MutationObserver(upd).observe(zb, { attributes: true, attributeFilter: ['class'] });
+      upd();
+    } else if (this._config.view_arrows !== false) {
+      // ordinateur : une flèche sur le bord (→ à droite sur Énergie, ← à gauche sur Réacteur) remplace le bouton Énergie/Réacteur
+      const vsw = root.getElementById('vsw');
+      if (vsw) vsw.style.setProperty('display', 'none', 'important');
+      const ar = document.createElement('button'); ar.id = 'varrow'; ar.type = 'button';
+      zh.appendChild(ar);
+      const upd = () => {
+        const l = zb.classList.contains('lum');
+        ar.classList.toggle('l', l); ar.classList.toggle('r', !l);
+        ar.innerHTML = '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="' + (l ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7') + '"/></svg>';
+        ar.title = l ? '⚡ Énergie' : '⚛ Réacteur';
+      };
+      ar.addEventListener('click', e => { e.stopPropagation(); const l = zb.classList.contains('lum'); const b = root.querySelector('#vsw button[data-v="' + (l ? '0' : '1') + '"]'); if (b) b.click(); });
       new MutationObserver(upd).observe(zb, { attributes: true, attributeFilter: ['class'] });
       upd();
     }
@@ -2342,7 +2362,7 @@ const LABELS = {
   today: 'Prévision Solcast aujourd’hui', tomorrow: 'Prévision Solcast demain',
   haute: 'Sonde haute', basse: 'Sonde basse', grande: 'Grande chauffe', desinf: 'Dernière désinfection',
   name: 'Nom affiché', label: 'Nom court (vue Énergie, ex. T1)', level: 'Niveau (%)', power: 'Puissance charge/décharge (W)', power_in: 'Ou : puissance entrée / charge (W)', power_out: 'Ou : puissance sortie / décharge (W)', temperature: 'Température',
-  min: 'Réglage du mini (number.*)', max: 'Réglage du maxi (number.*)', invert: 'Charge/décharge inversée',
+  min: 'Réglage du mini (number.*)', max: 'Réglage du maxi (number.*)', invert: 'Charge/décharge inversée', hide_power: 'Masquer les watts (ex. extension LINK sans capteur)',
   portail: 'Portail', garage: 'Porte de garage', volets: 'Volets', chauffage: 'Chauffage', scenarios: 'Scénarios',
   voiture: 'Voiture électrique', ballon: 'Ballon d’eau chaude', rappels: 'Rappels 🔔', chauffeeau: 'Tuile chauffe-eau', watt: 'Assistant Watt 👷',
   tarif_hp: 'Prix heures pleines (€/kWh)', tarif_hc: 'Prix heures creuses (€/kWh)', hc_text: 'Heures creuses',
@@ -2368,7 +2388,7 @@ const bat = i => ({ type: 'expandable', name: 'bat' + i, title: 'Batterie ' + i,
   { name: 'temperature', selector: SENSOR },
   { name: 'capacity', selector: NUM(0.001, 'kWh') },
   { type: 'grid', name: '', schema: [{ name: 'min', selector: ENT('number') }, { name: 'max', selector: ENT('number') }] },
-  { name: 'invert', selector: { boolean: {} } }] });
+  { name: 'invert', selector: { boolean: {} } }, { name: 'hide_power', selector: { boolean: {} } }] });
 const NUM = (step, unit) => ({ number: { mode: 'box', step, unit_of_measurement: unit } });
 const SCHEMA = [
   { name: 'style', selector: { select: { mode: 'dropdown', options: [
