@@ -20,6 +20,7 @@ Et trois **styles** : **Nouveau** (réacteur sombre et net, barre de navigation)
 ### Style Tuyaux (salle de tazzdel)
 ![Vue Réacteur — style Tuyaux](images/tuyaux-reacteur.jpg)
 ![Vue Énergie — style Tuyaux](images/tuyaux-energie.jpg)
+![Mode cinéma — style Tuyaux](images/tuyaux-cinema.jpg)
 
 Ce style garde le moteur de détection « toutes marques » de tazzdel (Zendure, Marstek, Victron, Tesla, Huawei, EcoFlow, Anker…) : le sens charge/décharge s'y calibre tout seul. Les batteries renseignées dans l'éditeur restent prioritaires.
 
