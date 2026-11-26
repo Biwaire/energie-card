@@ -123,6 +123,8 @@ patch("let last=performance.now(),acc=0,ca=0,cs=999,cf=999;", "let last=performa
 patch("ca+=dt;if(ca>1||ca===dt){ca=0;", "ca+=dt;if(ca>1){ca=0;", 'perf : mise à jour 1 fois/s');
 // performances : les flux de la vue Énergie ne sont plus animés quand la vue Réacteur est affichée
 patch("if(!D.live)sim(dt);updFlux(dt);ca+=dt;", "if(!D.live)sim(dt);if(!document.body.classList.contains('lum'))updFlux(dt);ca+=dt;", 'perf : flux Énergie en pause sur Réacteur');
+// réserve : une batterie au mini réglé et au repos n'est pas « faible » (le bandeau « Réserve atteinte » suffit)
+patch("UN.forEach((u,i)=>{const v=D.lvl[i];if(v!==undefined&&v!==null&&v>=0&&v<=ALERT_BAT_PCT)L.push", "UN.forEach((u,i)=>{const v=D.lvl[i];if(v!==undefined&&v!==null&&v>=0&&v<=ALERT_BAT_PCT&&!(v>=MIN_PCT-1&&v<=MIN_PCT+2&&!((D.p||[])[i]<-80)))L.push", 'réserve : pas « batterie faible »');
 patch("const INVERT_BAT=false;", "const INVERT_BAT=!!__C.invert_bat;", 'INVERT_BAT');
 if (MAIN) patch("const TARIF_HP=0.176,TARIF_HC=0.1361;", "const TARIF_HP=__C.tarif_hp!=null?+__C.tarif_hp:0.176,TARIF_HC=__C.tarif_hc!=null?+__C.tarif_hc:0.1361;", 'TARIFS');
 if (MAIN) patchRe(/const HC_PLAGES=\[\[[^\n]*?\]\];/, "const HC_PLAGES=Array.isArray(__C.hc_plages)&&__C.hc_plages.length?__C.hc_plages:[['22:00','06:00']];", 'HC_PLAGES');
@@ -163,6 +165,17 @@ code += `
 
 /* ---------- style « Tuyaux » (salle de tazzdel) : son moteur batteries « toutes marques » est gardé ---------- */
 if (!MAIN) {
+// un seul seuil de surcharge : le cerveau (bulles des techniciens, alertes) lit la pastille du réacteur et regarde maison OU réseau
+patch("window.__sur=function(){return SUR};", "window.__sur=function(){return SUR};window.__thrR=function(){return CFG.thr};", 'seuil unique : export');
+patch("function thr(){var t=(document.getElementById('rxthr')", "function thr(){try{if(window.__thrR&&window.__thrR()>0)return window.__thrR()}catch(e){}var t=(document.getElementById('rxthr')", 'seuil unique : cerveau');
+patch("function msgsL(){var M=[],d=dv(),h=new Date().getHours(),T=thr();\n if(D.grid>T)M.push(['⚠️ Surconsommation ! '+fk(D.grid)+' kW, le réseau dépasse le seuil !',2]);\n else if(D.grid>T*.85)M.push(['😬 Attention, je frôle le seuil réseau ('+fk(D.grid)+' kW)…',1]);", "function msgsL(){var M=[],d=dv(),h=new Date().getHours(),T=thr(),G=Math.max(D.grid,d.house||0);\n if(G>T)M.push(['⚠️ Surcharge ! '+fk(G)+' kW, ça dépasse le seuil !',2]);\n else if(G>T*.85)M.push(['😬 Attention, je frôle le seuil ('+fk(G)+' kW)…',1]);", 'seuil unique : bulles');
+patch("function rules(){var A=[],g=D.grid,T=thr(),h=new Date().getHours();\n if(g>T)A.push({l:2,m:'SURCHARGE RÉSEAU '", "function rules(){var A=[],g=Math.max(D.grid,(dv().house)||0),T=thr(),h=new Date().getHours();\n if(g>T)A.push({l:2,m:'SURCHARGE '", 'seuil unique : règles');
+// réserve atteinte (au mini réglé, batteries au repos) : pas d'alerte « vides avant le matin », Watt reste calme
+patch("low=avg<MIN_PCT+4;", "low=avg<MIN_PCT+4&&!(avg<=MIN_PCT+2&&D.p.every(function(p){return !(p<-80)}));", 'réserve : Watt calme');
+// mode cinéma : sur téléphone/tablette, pas de zoom lent continu (trop lourd pour la puce graphique, les cadres batteries clignotaient)
+patch("try{CN.an=L.animate([{transform:'translate(-461px,-139px) scale(1.512)'}", "try{if(window.matchMedia&&matchMedia('(pointer:coarse)').matches)throw 0;CN.an=L.animate([{transform:'translate(-461px,-139px) scale(1.512)'}", 'cinéma : pas de zoom sur tactile');
+// mode cinéma : sur téléphone (pas de touche Échap), on en sort en touchant l'écran
+patch("think('Mode cinéma — Échap (ou 🎬) pour revenir.',1)", "think('Mode cinéma — touchez l’écran (ou Échap) pour revenir.',1);window.__cnT0=Date.now();if(!window.__cnTap){window.__cnTap=1;document.addEventListener('pointerup',function(e){try{if(!document.body.classList.contains('bn-cine'))return;var t=e.target;if(t&&t.closest&&t.closest('#bnDock,#bnPanel,#bnC'))return;if(Date.now()-(window.__cnT0||0)<800)return;var b=document.getElementById('bnC');b&&b.click()}catch(_){}},true)}", 'cinéma : sortie au toucher');
 // cerveau : dans la carte, les réglages (tarifs, mini %, kWh par pack) ne sont pas globaux -> « économie ≈ NaN € »
 patch(`var G=function(n,d){try{return (new Function('return typeof '+n+'!=="undefined"?'+n+':undefined'))()}catch(e){}return d};`, `var G=function(n,d){var v;try{v={TARIF_HC:typeof TARIF_HC!=='undefined'?TARIF_HC:void 0,TARIF_HP:typeof TARIF_HP!=='undefined'?TARIF_HP:void 0,KWH_PACK:typeof KWH_PACK!=='undefined'?KWH_PACK:void 0,MIN_PCT:typeof MIN_PCT!=='undefined'?MIN_PCT:void 0}[n]}catch(e){}if(v===void 0)try{v=(new Function('return typeof '+n+'!=="undefined"?'+n+':undefined'))()}catch(e){}return (typeof v==='number'&&isFinite(v))?v:d};`, 'cerveau : réglages');
 patch("B.kwh.saved+=Math.max(0,x-Math.max(0,D.grid))*dt/1000*pr;", "if(!isFinite(B.kwh.saved))B.kwh.saved=0;B.kwh.saved+=Math.max(0,x-Math.max(0,D.grid))*dt/1000*pr;", 'cerveau : économie NaN');
@@ -276,7 +289,7 @@ layout()}catch(e){console.error('tuiles',e)}})();`, 'tuyaux : tuiles commandes')
     const bp = has ? '' : fs.readFileSync(new URL('./brain-panel.css', import.meta.url), 'utf8').split('`').join('');
     for (let i = 0; i < html.length; i++) html[i] = html[i].replace('<style id="bnCss">', '<style id="bnCss">\n' + bp + '\nbody.bn-cine #lum .lp,body.bn-cine #lCine{display:none!important}\n'); }
   // batteries à leur réserve mini : « réserve atteinte » au lieu de « vides vers HH:MM » (Titan, Zendure : la décharge s'arrête au mini réglé)
-  patch("if(f&&f.emptyBeforeSun)L.push({k:'vide',lvl:2,t:'Batteries vides avant le matin',v:'vers '+hhmm(f.empty)})", "if(f&&f.stock<0.3)L.push({k:'vide',lvl:1,t:'Réserve des batteries atteinte',v:'mini '+MIN_PCT+' % · réseau en relais'});else if(f&&f.emptyBeforeSun)L.push({k:'vide',lvl:2,t:'Batteries vides avant le matin',v:'vers '+hhmm(f.empty)})", 'réserve : alerte');
+  patch("if(f&&f.emptyBeforeSun)L.push({k:'vide',lvl:2,t:'Batteries vides avant le matin',v:'vers '+hhmm(f.empty)})", "if(f&&(f.stock<0.3||(function(){var a=(D.lvl||[]).filter(function(v){return v>=0});return a.length&&a.reduce(function(x,y){return x+y},0)/a.length<=MIN_PCT+2&&(D.p||[]).every(function(p){return !(p<-80)})})()))L.push({k:'vide',lvl:1,t:'Réserve des batteries atteinte',v:'mini '+MIN_PCT+' % · réseau en relais'});else if(f&&f.emptyBeforeSun)L.push({k:'vide',lvl:2,t:'Batteries vides avant le matin',v:'vers '+hhmm(f.empty)})", 'réserve : alerte');
   patch("else if(f&&f.emptyBeforeSun)t='⚠ Batteries vides avant le soleil : économisez';", "else if(f&&f.stock<0.3)t='🔋 Réserve atteinte (mini '+MIN_PCT+' %) : le réseau prend le relais';else if(f&&f.emptyBeforeSun)t='⚠ Batteries vides avant le soleil : économisez';", 'réserve : conseil');
   patch("let t,c;if(f.emptyBeforeSun){t='⚠ VIDES VERS '", "let t,c;if(f.stock<0.3){t='🔋 RÉSERVE ATTEINTE';c='#ffb13b'}else if(f.emptyBeforeSun){t='⚠ VIDES VERS '", 'réserve : bloc batteries');
   patch("var au='--';if(f){if(f.empty){", "var au='--';if(f){if(f.stock<0.3)au='réserve';else if(f.empty){", 'réserve : autonomie');
@@ -294,7 +307,7 @@ if (code.includes("var n=Math.min((window.UN&&UN.length)||4,4)")) {
 
 if (MAIN) {
   // batteries à leur réserve mini : « réserve atteinte » au lieu de « vides vers HH:MM » (Titan, Zendure : la décharge s'arrête au mini réglé)
-  patch("if(f&&f.emptyBeforeSun)L.push({k:'vide',lvl:2,t:'Batteries vides avant le matin',v:'vers '+hhmm(f.empty)})", "if(f&&f.stock<0.3)L.push({k:'vide',lvl:1,t:'Réserve des batteries atteinte',v:'mini '+MIN_PCT+' % · réseau en relais'});else if(f&&f.emptyBeforeSun)L.push({k:'vide',lvl:2,t:'Batteries vides avant le matin',v:'vers '+hhmm(f.empty)})", 'réserve : alerte');
+  patch("if(f&&f.emptyBeforeSun)L.push({k:'vide',lvl:2,t:'Batteries vides avant le matin',v:'vers '+hhmm(f.empty)})", "if(f&&(f.stock<0.3||(function(){var a=(D.lvl||[]).filter(function(v){return v>=0});return a.length&&a.reduce(function(x,y){return x+y},0)/a.length<=MIN_PCT+2&&(D.p||[]).every(function(p){return !(p<-80)})})()))L.push({k:'vide',lvl:1,t:'Réserve des batteries atteinte',v:'mini '+MIN_PCT+' % · réseau en relais'});else if(f&&f.emptyBeforeSun)L.push({k:'vide',lvl:2,t:'Batteries vides avant le matin',v:'vers '+hhmm(f.empty)})", 'réserve : alerte');
   patch("else if(f&&f.emptyBeforeSun)t='⚠ Batteries vides avant le soleil : économisez';", "else if(f&&f.stock<0.3)t='🔋 Réserve atteinte (mini '+MIN_PCT+' %) : le réseau prend le relais';else if(f&&f.emptyBeforeSun)t='⚠ Batteries vides avant le soleil : économisez';", 'réserve : conseil');
   patch("let t,c;if(f.emptyBeforeSun){t='⚠ VIDES VERS '", "let t,c;if(f.stock<0.3){t='🔋 RÉSERVE ATTEINTE';c='#ffb13b'}else if(f.emptyBeforeSun){t='⚠ VIDES VERS '", 'réserve : bloc batteries');
   patch("var au='--';if(f){if(f.empty){", "var au='--';if(f){if(f.stock<0.3)au='réserve';else if(f.empty){", 'réserve : autonomie');
