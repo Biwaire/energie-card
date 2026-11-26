@@ -19,7 +19,7 @@
  INSTALL (EN): drop in /config/www and add an iframe card to /local/<file>.html. Sensors and storage
     batteries of any brand are auto-discovered; charge/discharge sign is auto-calibrated.
 */
-/* Style « Tuyaux (salle de tazzdel) » de la carte energie-card 1.4.7.
+/* Style « Tuyaux (salle de tazzdel) » de la carte energie-card 1.5.0.
    Chargé automatiquement par energie-card.js quand ce style est choisi :
    NE PAS l'ajouter comme ressource. */
 (window.__ENERGIE_CARD_DASH = window.__ENERGIE_CARD_DASH || {})["tuyaux"] = {
