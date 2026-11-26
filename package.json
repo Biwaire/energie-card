@@ -1,6 +1,6 @@
 {
   "name": "energie-card",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "description": "Tableau de bord énergie « réacteur » pour Home Assistant : solaire, réseau, batteries Izypower Titan, voiture, ballon ECS.",
   "private": true,
   "type": "module",

@@ -123,8 +123,13 @@ patch("let last=performance.now(),acc=0,ca=0,cs=999,cf=999;", "let last=performa
 patch("ca+=dt;if(ca>1||ca===dt){ca=0;", "ca+=dt;if(ca>1){ca=0;", 'perf : mise à jour 1 fois/s');
 // performances : les flux de la vue Énergie ne sont plus animés quand la vue Réacteur est affichée
 patch("if(!D.live)sim(dt);updFlux(dt);ca+=dt;", "if(!D.live)sim(dt);if(!document.body.classList.contains('lum'))updFlux(dt);ca+=dt;", 'perf : flux Énergie en pause sur Réacteur');
-// réserve : une batterie au mini réglé et au repos n'est pas « faible » (le bandeau « Réserve atteinte » suffit)
-patch("UN.forEach((u,i)=>{const v=D.lvl[i];if(v!==undefined&&v!==null&&v>=0&&v<=ALERT_BAT_PCT)L.push", "UN.forEach((u,i)=>{const v=D.lvl[i];if(v!==undefined&&v!==null&&v>=0&&v<=ALERT_BAT_PCT&&!(v>=MIN_PCT-1&&v<=MIN_PCT+2&&!((D.p||[])[i]<-80)))L.push", 'réserve : pas « batterie faible »');
+// réserve : une batterie au mini réglé et au repos n'est pas « faible » ; et une lecture basse doit durer 90 s (un capteur qui passe à 0 % une seconde ne déclenche plus d'alerte)
+patch("UN.forEach((u,i)=>{const v=D.lvl[i];if(v!==undefined&&v!==null&&v>=0&&v<=ALERT_BAT_PCT)L.push", "UN.forEach((u,i)=>{const v=D.lvl[i];if((function(){var T=window.__lowT||(window.__lowT={});var low=v!==undefined&&v!==null&&v>=0&&v<=ALERT_BAT_PCT&&!(v>=MIN_PCT-1&&v<=MIN_PCT+2&&!((D.p||[])[i]<-80));if(!low){delete T[i];return false}if(!T[i])T[i]=Date.now();return Date.now()-T[i]>=90000})())L.push", 'réserve : pas « batterie faible »');
+// détection d'appareils : un appareil à thermostat (fer à lisser, radiateur…) qui s'allume et s'éteint ne fait parler Watt qu'une fois par 10 min
+patch("var KEY='zapp',S=[],cool=0,unk=[],wait=null,act={};", "var KEY='zapp',S=[],cool=0,unk=[],wait=null,act={};var __R=[];function __aq(k,w){var t=Date.now(),hit=false;__R=__R.filter(function(r){return t-r.t<600000});__R.forEach(function(r){if(r.k===k&&Math.abs(r.w-Math.abs(w))<=Math.max(80,Math.abs(w)*.18)){hit=true;r.t=t}});if(!hit)__R.push({k:k,w:Math.abs(w),t:t});return hit}", 'appareils : anti-répétition');
+patch("var gs=guess(d);WATCH.say('Un appareil de '", "var gs=guess(d);if(__aq('u',d))return;WATCH.say('Un appareil de '", 'appareils : inconnu 1 fois');
+patch("if(g.w>=250)WATCH.say(cap(g.name)+' vient de démarrer", "if(g.w>=250&&!__aq('s'+g.name,g.w))WATCH.say(cap(g.name)+' vient de démarrer", 'appareils : démarrage 1 fois');
+patch("if(g2.w>=250)WATCH.say(cap(g2.name)+' s’est arrêté(e)", "if(g2.w>=250&&!__aq('e'+g2.name,g2.w))WATCH.say(cap(g2.name)+' s’est arrêté(e)", 'appareils : arrêt 1 fois');
 patch("const INVERT_BAT=false;", "const INVERT_BAT=!!__C.invert_bat;", 'INVERT_BAT');
 if (MAIN) patch("const TARIF_HP=0.176,TARIF_HC=0.1361;", "const TARIF_HP=__C.tarif_hp!=null?+__C.tarif_hp:0.176,TARIF_HC=__C.tarif_hc!=null?+__C.tarif_hc:0.1361;", 'TARIFS');
 if (MAIN) patchRe(/const HC_PLAGES=\[\[[^\n]*?\]\];/, "const HC_PLAGES=Array.isArray(__C.hc_plages)&&__C.hc_plages.length?__C.hc_plages:[['22:00','06:00']];", 'HC_PLAGES');
@@ -165,9 +170,19 @@ code += `
 
 /* ---------- style « Tuyaux » (salle de tazzdel) : son moteur batteries « toutes marques » est gardé ---------- */
 if (!MAIN) {
+patch("['M833.8 218.7 C833.8 204.7 833.8 149.0 833.8 135.1','#4de1ff','house']", "['M832.0 218.7 C832.0 204.7 832.0 149.0 832.0 135.1','#4de1ff','house']", 'flux maison centré');
+// flux des tuyaux du haut (solaire jaune, réseau rouge) recentrés sur l'axe des tuyaux de l'image
+patch("['M670.4 135.1 C676.7 142.9 695.7 167.8 708.4 182.2 C721.1 196.6 740.1 215.1 746.4 221.7','#ffd24a','pv']", "['M663.0 134.0 C682.3 163.3 701.7 192.7 721.0 222.0','#ffd24a','pv']", 'flux solaire centré');
+patch("['M936.4 224.0 C944.0 217.0 966.5 197.3 982.0 182.2 C997.5 167.1 1021.3 141.7 1029.1 133.6','#4fc3ff','grid']", "['M952.0 224.0 C974.3 194.0 996.7 164.0 1019.0 134.0','#4fc3ff','grid']", 'flux réseau centré');
+// vapeur : le 1er pas de temps pouvait être négatif (horodatage de l'image < moment du clic) -> la vapeur s'éteignait aussitôt, « ne marche pas tout le temps »
+patch("function frame(now){var dt=Math.min(.05,(now-last)/1000);last=now;T+=dt;\n pw+=((on?1:0)-pw)*Math.min(1,dt*1.6);", "function frame(now){var dt=Math.max(0,Math.min(.05,(now-last)/1000));last=now;T+=dt;\n pw+=((on?1:0)-pw)*Math.min(1,dt*1.6);", 'vapeur : pas de temps négatif');
+patch(" if(pw>.02||P.length){requestAnimationFrame(frame)}else{run=false;cv.style.display='none'}}", " if(on||pw>.02||P.length){requestAnimationFrame(frame)}else{run=false;cv.style.display='none'}}", 'vapeur : ne pas s’arrêter tant qu’elle est demandée');
+// mode cinéma : Cerveau, trophées, visite guidée, simulateur et histoire ouvrent des panneaux -> on sort d'abord du mode cinéma (sinon panneau coupé sur un réacteur zoomé et flou)
+patch("think('Mode cinéma — Échap (ou 🎬) pour revenir.',1)", "think('Mode cinéma — Échap (ou 🎬) pour revenir.',1);if(!window.__cnBtn){window.__cnBtn=1;document.addEventListener('click',function(e){try{if(!document.body.classList.contains('bn-cine'))return;var t=e.target&&e.target.closest&&e.target.closest('#bnB,#bnTrb,#bnTb,#bnSmB,#bnStB');if(!t)return;var c=document.getElementById('bnC');c&&c.click()}catch(_){}},true)}", 'cinéma : sortir avant un panneau');
+// boutons ajoutés par tazzdel (sirène, Noël, simulateur, histoire) : « this » n'était pas le bouton -> erreur rouge « reading 'style' »
+patch("b.addEventListener('click',function(ev){try{fn(ev)}catch(e){console.error(e)}});dock&&dock.appendChild(b);return b}", "b.addEventListener('click',function(ev){try{fn.call(b,ev)}catch(e){console.error(e)}});dock&&dock.appendChild(b);return b}", 'dock : boutons sirène/Noël');
 // un seul seuil de surcharge : le cerveau (bulles des techniciens, alertes) lit la pastille du réacteur et regarde maison OU réseau
 patch("window.__sur=function(){return SUR};", "window.__sur=function(){return SUR};window.__thrR=function(){return CFG.thr};", 'seuil unique : export');
-patch("function thr(){var t=(document.getElementById('rxthr')", "function thr(){try{if(window.__thrR&&window.__thrR()>0)return window.__thrR()}catch(e){}var t=(document.getElementById('rxthr')", 'seuil unique : cerveau');
 patch("function msgsL(){var M=[],d=dv(),h=new Date().getHours(),T=thr();\n if(D.grid>T)M.push(['⚠️ Surconsommation ! '+fk(D.grid)+' kW, le réseau dépasse le seuil !',2]);\n else if(D.grid>T*.85)M.push(['😬 Attention, je frôle le seuil réseau ('+fk(D.grid)+' kW)…',1]);", "function msgsL(){var M=[],d=dv(),h=new Date().getHours(),T=thr(),G=Math.max(D.grid,d.house||0);\n if(G>T)M.push(['⚠️ Surcharge ! '+fk(G)+' kW, ça dépasse le seuil !',2]);\n else if(G>T*.85)M.push(['😬 Attention, je frôle le seuil ('+fk(G)+' kW)…',1]);", 'seuil unique : bulles');
 patch("function rules(){var A=[],g=D.grid,T=thr(),h=new Date().getHours();\n if(g>T)A.push({l:2,m:'SURCHARGE RÉSEAU '", "function rules(){var A=[],g=Math.max(D.grid,(dv().house)||0),T=thr(),h=new Date().getHours();\n if(g>T)A.push({l:2,m:'SURCHARGE '", 'seuil unique : règles');
 // réserve atteinte (au mini réglé, batteries au repos) : pas d'alerte « vides avant le matin », Watt reste calme
@@ -179,9 +194,6 @@ patch("think('Mode cinéma — Échap (ou 🎬) pour revenir.',1)", "think('Mode
 // cerveau : dans la carte, les réglages (tarifs, mini %, kWh par pack) ne sont pas globaux -> « économie ≈ NaN € »
 patch(`var G=function(n,d){try{return (new Function('return typeof '+n+'!=="undefined"?'+n+':undefined'))()}catch(e){}return d};`, `var G=function(n,d){var v;try{v={TARIF_HC:typeof TARIF_HC!=='undefined'?TARIF_HC:void 0,TARIF_HP:typeof TARIF_HP!=='undefined'?TARIF_HP:void 0,KWH_PACK:typeof KWH_PACK!=='undefined'?KWH_PACK:void 0,MIN_PCT:typeof MIN_PCT!=='undefined'?MIN_PCT:void 0}[n]}catch(e){}if(v===void 0)try{v=(new Function('return typeof '+n+'!=="undefined"?'+n+':undefined'))()}catch(e){}return (typeof v==='number'&&isFinite(v))?v:d};`, 'cerveau : réglages');
 patch("B.kwh.saved+=Math.max(0,x-Math.max(0,D.grid))*dt/1000*pr;", "if(!isFinite(B.kwh.saved))B.kwh.saved=0;B.kwh.saved+=Math.max(0,x-Math.max(0,D.grid))*dt/1000*pr;", 'cerveau : économie NaN');
-// vapeur : par bouffées de 15 s après chaque électrocution, au lieu de tourner sans fin tant que la surcharge dure
-patch("if(!crit){seen=false;since=0;set(false);return}", "if(!crit){seen=false;since=0;window.__bnStT=0;set(false);return}", 'vapeur : remise à zéro');
-patch("set(lum&&!zv&&!window.__bnSteamOff&&(seen||Date.now()-since>4000))", "var __w=lum&&!zv&&!window.__bnSteamOff&&(seen||Date.now()-since>4000);if(zv)window.__bnStT=0;if(__w&&!window.__bnStT)window.__bnStT=Date.now();if(__w&&Date.now()-window.__bnStT>15000)__w=false;set(__w)", 'vapeur : bouffées de 15 s');
 // bandeau : « Réserve atteinte » au lieu de « Batteries faibles » quand on est au mini réglé (même message que le conseil de Watt)
 patch("else if(tot<MIN_PCT+8)al={c:'#ff3b3b',t:'⚠ Batteries faibles '+Math.round(tot)+' %',f:2.2};", "else if(tot<MIN_PCT+8)al=tot<=MIN_PCT+2?{c:'#ffb04a',t:'🔋 Réserve atteinte '+Math.round(tot)+' % (mini '+MIN_PCT+' %)',f:1.2}:{c:'#ff8a3b',t:'⚠ Proche de la réserve '+Math.round(tot)+' %',f:1.6};", 'bandeau réserve');
   // batteries de l'éditeur : prioritaires sur la détection automatique (pw2 = capteur de décharge séparé)
@@ -296,7 +308,7 @@ layout()}catch(e){console.error('tuiles',e)}})();`, 'tuyaux : tuiles commandes')
   patch("var du=st.kwh*1000/hs;r.push(['Autonomie des batteries',", "var du=st.kwh*1000/hs;if(st.kwh<0.3)r.push(['Autonomie des batteries','Les batteries ont atteint leur réserve (mini '+MIN_PCT+' %) : le réseau prend le relais.']);else r.push(['Autonomie des batteries',", 'réserve : astuces');
   // son bouton plein écran : remplacé par celui de la carte (⛶ déplaçable)
   patch("if(!st||document.getElementById('fsb'))return;", "return;", 'tuyaux : plein écran');
-  code = code.split("vr.textContent='VERSION_TAG'").join("vr.textContent='tuyaux'");
+  code = code.split("vr.textContent='VERSION_TAG'").join("vr.textContent='tuyaux'").replace(/vr\.textContent='Énergie Réacteur · v\d+'/g,"vr.textContent='tuyaux'");
 }
 
 // vue « GROS » : UN n'est pas sur window → toujours 4 zones sans nom ; libellés T1… comme la vue Énergie

@@ -26,7 +26,7 @@
  INSTALL (EN) — drop in /config/www, add an iframe card pointing to /local/<file>.html.
     Sensors are auto-discovered (solar, grid, Izypower Titan batteries, EV, water heater, Solcast, weather).
 */
-/* Style « Classique (v2) » de la carte energie-card 1.4.6.
+/* Style « Classique (v2) » de la carte energie-card 1.4.7.
    Chargé automatiquement par energie-card.js quand ce style est choisi :
    NE PAS l'ajouter comme ressource. */
 (window.__ENERGIE_CARD_DASH = window.__ENERGIE_CARD_DASH || {})["classic"] = {
@@ -476,7 +476,7 @@ const ALR={list:[],seen:{},openSince:{},sound:LS.get('zsound')==='1',ctx:null};
 function beep(){try{if(!ALR.ctx)ALR.ctx=new (window.AudioContext||window.webkitAudioContext)();const c=ALR.ctx;[0,.3].forEach(t=>{const o=c.createOscillator(),g=c.createGain();o.frequency.value=880;o.connect(g);g.connect(c.destination);g.gain.setValueAtTime(.2,c.currentTime+t);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+t+.25);o.start(c.currentTime+t);o.stop(c.currentTime+t+.26)})}catch(e){}}
 function calcAlerts(){const L=[],hs=HS();
  {const f=battForecast();if(f&&(f.stock<0.3||(function(){var a=(D.lvl||[]).filter(function(v){return v>=0});return a.length&&a.reduce(function(x,y){return x+y},0)/a.length<=MIN_PCT+2&&(D.p||[]).every(function(p){return !(p<-80)})})()))L.push({k:'vide',lvl:1,t:'Réserve des batteries atteinte',v:'mini '+MIN_PCT+' % · réseau en relais'});else if(f&&f.emptyBeforeSun)L.push({k:'vide',lvl:2,t:'Batteries vides avant le matin',v:'vers '+hhmm(f.empty)})}
- UN.forEach((u,i)=>{const v=D.lvl[i];if(v!==undefined&&v!==null&&v>=0&&v<=ALERT_BAT_PCT&&!(v>=MIN_PCT-1&&v<=MIN_PCT+2&&!((D.p||[])[i]<-80)))L.push({k:'bat'+i,lvl:v<8?3:2,t:'Batterie faible',v:u.name+' '+Math.round(v)+' %'})});
+ UN.forEach((u,i)=>{const v=D.lvl[i];if((function(){var T=window.__lowT||(window.__lowT={});var low=v!==undefined&&v!==null&&v>=0&&v<=ALERT_BAT_PCT&&!(v>=MIN_PCT-1&&v<=MIN_PCT+2&&!((D.p||[])[i]<-80));if(!low){delete T[i];return false}if(!T[i])T[i]=Date.now();return Date.now()-T[i]>=90000})())L.push({k:'bat'+i,lvl:v<8?3:2,t:'Batterie faible',v:u.name+' '+Math.round(v)+' %'})});
  if(D.grid>ALERT_IMPORT_W)L.push({k:'imp',lvl:2,t:'Import réseau élevé',v:fW(D.grid)});
  if(D.offline.length)L.push({k:'off',lvl:1,t:'Capteurs hors ligne',v:D.offline.length+' : '+D.offline.slice(0,2).map(o=>String(o.name).slice(0,16)).join(', ')});
  hs.cov.filter(c=>c.cls==='portail'||c.cls==='garage').forEach(c=>{if(c.state==='open'){ALR.openSince[c.id]=c.mem||ALR.openSince[c.id]||Date.now();const m=Math.floor((Date.now()-ALR.openSince[c.id])/60000);if(m>=ALERT_OPEN_MIN)L.push({k:'open'+c.id,lvl:2,t:(c.cls==='portail'?'Portail':'Porte de garage')+' ouvert',v:'depuis '+m+' min'})}else delete ALR.openSince[c.id]});
@@ -1135,7 +1135,7 @@ mic.onclick=function(){var SR=window.SpeechRecognition||window.webkitSpeechRecog
 /* ── script 14/22 ── */
 __H(13);
 (function(){
-var KEY='zapp',S=[],cool=0,unk=[],wait=null,act={};
+var KEY='zapp',S=[],cool=0,unk=[],wait=null,act={};var __R=[];function __aq(k,w){var t=Date.now(),hit=false;__R=__R.filter(function(r){return t-r.t<600000});__R.forEach(function(r){if(r.k===k&&Math.abs(r.w-Math.abs(w))<=Math.max(80,Math.abs(w)*.18)){hit=true;r.t=t}});if(!hit)__R.push({k:k,w:Math.abs(w),t:t});return hit}
 function load(){try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){return[]}}
 function save(l){try{localStorage.setItem(KEY,JSON.stringify(l))}catch(e){}}
 var SIG=load();window.WATT_APPS=function(){return{sig:SIG,act:act}};
@@ -1152,10 +1152,10 @@ var ST={};function stat(n,wh){var k=new Date().toDateString(),x=ST[n];if(!x||x.k
 function onStep(d){var t=Date.now();
  if(d>0){
   if(wait&&t-wait.t<90000){var nm=wait.name;wait=null;learn(nm,d);act[nm]={t:t,w:d};WATCH.say('Compris : '+nm+' consomme environ '+fW(d)+'. Je la reconnaîtrai.','sun',2);return}
-  var g=find(d);if(g){act[g.name]={t:t,w:d};if(g.w>=250)WATCH.say(cap(g.name)+' vient de démarrer (+'+fW(d)+')','',2);return}
-  if(d>=300){unk.push({t:t,d:d});if(unk.length>10)unk.shift();var gs=guess(d);WATCH.say('Un appareil de '+fW(d)+' vient de démarrer'+(gs.length?' (ça ressemble à : '+gs.join(', ')+')':'')+'. C’est quoi ? Touche-moi et écris par exemple « c’est '+(gs[0]||'four')+' »','worry',3)}
+  var g=find(d);if(g){act[g.name]={t:t,w:d};if(g.w>=250&&!__aq('s'+g.name,g.w))WATCH.say(cap(g.name)+' vient de démarrer (+'+fW(d)+')','',2);return}
+  if(d>=300){unk.push({t:t,d:d});if(unk.length>10)unk.shift();var gs=guess(d);if(__aq('u',d))return;WATCH.say('Un appareil de '+fW(d)+' vient de démarrer'+(gs.length?' (ça ressemble à : '+gs.join(', ')+')':'')+'. C’est quoi ? Touche-moi et écris par exemple « c’est '+(gs[0]||'four')+' »','worry',3)}
  }else{
-  var g2=find(d);if(g2&&act[g2.name]){var a=act[g2.name],ms=t-a.t,wh=a.w*ms/3600000,eur=wh/1000*(typeof hcNow==='function'&&hcNow()?TARIF_HC:TARIF_HP);delete act[g2.name];stat(g2.name,wh);if(g2.w>=250)WATCH.say(cap(g2.name)+' s’est arrêté(e) après '+dur(ms)+' : '+Math.round(wh)+' Wh, soit '+fr(eur,2)+' €','',2)}
+  var g2=find(d);if(g2&&act[g2.name]){var a=act[g2.name],ms=t-a.t,wh=a.w*ms/3600000,eur=wh/1000*(typeof hcNow==='function'&&hcNow()?TARIF_HC:TARIF_HP);delete act[g2.name];stat(g2.name,wh);if(g2.w>=250&&!__aq('e'+g2.name,g2.w))WATCH.say(cap(g2.name)+' s’est arrêté(e) après '+dur(ms)+' : '+Math.round(wh)+' Wh, soit '+fr(eur,2)+' €','',2)}
  }}
 function cap(s){return s.charAt(0).toUpperCase()+s.slice(1)}
 setInterval(function(){try{var h=derived().house;S.push(h);if(S.length>30)S.shift();var n=S.length;if(n<10||Date.now()<cool)return;
