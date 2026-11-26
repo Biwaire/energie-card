@@ -19,7 +19,7 @@
  INSTALL (EN): drop in /config/www and add an iframe card to /local/<file>.html. Sensors and storage
     batteries of any brand are auto-discovered; charge/discharge sign is auto-calibrated.
 */
-/* Style « Tuyaux (salle de tazzdel) » de la carte energie-card 1.4.5.
+/* Style « Tuyaux (salle de tazzdel) » de la carte energie-card 1.4.6.
    Chargé automatiquement par energie-card.js quand ce style est choisi :
    NE PAS l'ajouter comme ressource. */
 (window.__ENERGIE_CARD_DASH = window.__ENERGIE_CARD_DASH || {})["tuyaux"] = {
@@ -533,8 +533,8 @@ const LS={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:
 const ALR={list:[],seen:{},openSince:{},sound:LS.get('zsound')==='1',ctx:null};
 function beep(){try{if(!ALR.ctx)ALR.ctx=new (window.AudioContext||window.webkitAudioContext)();const c=ALR.ctx;[0,.3].forEach(t=>{const o=c.createOscillator(),g=c.createGain();o.frequency.value=880;o.connect(g);g.connect(c.destination);g.gain.setValueAtTime(.2,c.currentTime+t);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+t+.25);o.start(c.currentTime+t);o.stop(c.currentTime+t+.26)})}catch(e){}}
 function calcAlerts(){const L=[],hs=HS();
- {const f=battForecast();if(f&&f.stock<0.3)L.push({k:'vide',lvl:1,t:'Réserve des batteries atteinte',v:'mini '+MIN_PCT+' % · réseau en relais'});else if(f&&f.emptyBeforeSun)L.push({k:'vide',lvl:2,t:'Batteries vides avant le matin',v:'vers '+hhmm(f.empty)})}
- UN.forEach((u,i)=>{const v=D.lvl[i];if(v!==undefined&&v!==null&&v>=0&&v<=ALERT_BAT_PCT)L.push({k:'bat'+i,lvl:v<8?3:2,t:'Batterie faible',v:u.name+' '+Math.round(v)+' %'})});
+ {const f=battForecast();if(f&&(f.stock<0.3||(function(){var a=(D.lvl||[]).filter(function(v){return v>=0});return a.length&&a.reduce(function(x,y){return x+y},0)/a.length<=MIN_PCT+2&&(D.p||[]).every(function(p){return !(p<-80)})})()))L.push({k:'vide',lvl:1,t:'Réserve des batteries atteinte',v:'mini '+MIN_PCT+' % · réseau en relais'});else if(f&&f.emptyBeforeSun)L.push({k:'vide',lvl:2,t:'Batteries vides avant le matin',v:'vers '+hhmm(f.empty)})}
+ UN.forEach((u,i)=>{const v=D.lvl[i];if(v!==undefined&&v!==null&&v>=0&&v<=ALERT_BAT_PCT&&!(v>=MIN_PCT-1&&v<=MIN_PCT+2&&!((D.p||[])[i]<-80)))L.push({k:'bat'+i,lvl:v<8?3:2,t:'Batterie faible',v:u.name+' '+Math.round(v)+' %'})});
  if(D.grid>ALERT_IMPORT_W)L.push({k:'imp',lvl:2,t:'Import réseau élevé',v:fW(D.grid)});
  if(D.offline.length)L.push({k:'off',lvl:1,t:'Capteurs hors ligne',v:D.offline.length+' : '+D.offline.slice(0,2).map(o=>String(o.name).slice(0,16)).join(', ')});
  hs.cov.filter(c=>c.cls==='portail'||c.cls==='garage').forEach(c=>{if(c.state==='open'){ALR.openSince[c.id]=c.mem||ALR.openSince[c.id]||Date.now();const m=Math.floor((Date.now()-ALR.openSince[c.id])/60000);if(m>=ALERT_OPEN_MIN)L.push({k:'open'+c.id,lvl:2,t:(c.cls==='portail'?'Portail':'Porte de garage')+' ouvert',v:'depuis '+m+' min'})}else delete ALR.openSince[c.id]});
@@ -1006,7 +1006,7 @@ var idx=0,last='',mood='';
 var P={sleep:['Zzz… bonne nuit !','Zzz… je veille en rêve','Zzz… les batteries dorment aussi'],worry:['Oh là là… batteries basses !','Économisons un peu !','Je n’aime pas ça…'],ev:['Je branche la voiture !','Ça charge, ça charge…','Un plein d’électrons !'],evx:['Borne publique : pas sur ma facture !','Voiture en charge ailleurs'],sun:['Quel beau soleil !','Ça produit, ça produit !','Les panneaux sont heureux'],idle:['Je surveille tout','Tout est calme','Bonjour, je suis Watt !']};
 function pick(m){var a=P[m].slice();if(m==='idle'||m==='sun'){var dv=derived(),av=Math.round(D.lvl.reduce(function(x,y){return x+y},0)/D.lvl.length);a.push('Soleil : '+fW(D.pv),'Maison : '+fW(dv.house),'Batteries : '+av+' %','Prévu aujourd\u2019hui : '+fr(D.today,1)+' kWh')}return a[idx%a.length]}
 function upd(){if(!on()){show(false);return}show(true);try{
- var h=new Date().getHours()+new Date().getMinutes()/60,night=h<6.5||h>20.5,avg=D.lvl.reduce(function(a,b){return a+b},0)/D.lvl.length,low=avg<MIN_PCT+4;
+ var h=new Date().getHours()+new Date().getMinutes()/60,night=h<6.5||h>20.5,avg=D.lvl.reduce(function(a,b){return a+b},0)/D.lvl.length,low=avg<MIN_PCT+4&&!(avg<=MIN_PCT+2&&D.p.every(function(p){return !(p<-80)}));
  var m=night&&!(D.ev>=1500)?'sleep':low?'worry':D.ev>=1500?'ev':D.pv>800?'sun':'idle';var wm=WATCH.mood();if(wm)m=wm;
  var mm=(m==='ev'&&D.evExt)?'evx':m;
  if(m!==mood){mood=m;W.className='m-'+m;idx=0;last=''}
@@ -1450,7 +1450,7 @@ setInterval(function(){try{
 }catch(e){console.error('LUM2 '+e.message)}},700);
 setInterval(upd,700);upd();
 /* ===== v24 : surcharge réglable, ciel, météo, score, replay, veille cinéma ===== */
-var CFG={thr:6000,cine:1,voice:0},SURV=0,SUR=false,VIC=false,RPON=false,CINE=false,wakeT=0;window.__sur=function(){return SUR};
+var CFG={thr:6000,cine:1,voice:0},SURV=0,SUR=false,VIC=false,RPON=false,CINE=false,wakeT=0;window.__sur=function(){return SUR};window.__thrR=function(){return CFG.thr};
 try{var c0=JSON.parse(localStorage.getItem('rx-cfg')||'null');if(c0)for(var kk in c0)CFG[kk]=c0[kk]}catch(e){}
 ALERT_GRID=CFG.thr;
 function saveCfg(){try{localStorage.setItem('rx-cfg',JSON.stringify(CFG))}catch(e){}}
@@ -1874,9 +1874,9 @@ function cine(on){if(on===undefined)on=!document.body.classList.contains('bn-cin
   CN.keep=keep;clearInterval(CN.iv);CN.iv=setInterval(hideAll,400);hideAll();
   try{CN.mo&&CN.mo.disconnect();CN.mo=new MutationObserver(function(){hideAll()});CN.mo.observe(st,{attributes:true,attributeFilter:['style','class'],subtree:true,childList:true})}catch(e){}
   try{var sc=document.getElementById('bnCineCss')||document.head.appendChild(Object.assign(document.createElement('style'),{id:'bnCineCss'}));sc.textContent='body.bn-cine #stage>*:not(#lum):not(#bgph):not(#bnDock):not(#fsb):not(#bnAlert):not(#bnBar):not(#bnTh):not(#bnPanel),body.bn-cine #lum .lp,body.bn-cine #lum #lCine{display:none!important;visibility:hidden!important;opacity:0!important}'}catch(e){}
-  try{CN.an=L.animate([{transform:'translate(-461px,-139px) scale(1.512)'},{transform:'translate(-566px,-184px) scale(1.627)'}],{duration:60000,direction:'alternate',iterations:Infinity,easing:'ease-in-out',fill:'both'})}catch(e){L.style.transform='translate(-461px,-139px) scale(1.512)'}
+  try{if(window.matchMedia&&matchMedia('(pointer:coarse)').matches)throw 0;CN.an=L.animate([{transform:'translate(-461px,-139px) scale(1.512)'},{transform:'translate(-566px,-184px) scale(1.627)'}],{duration:60000,direction:'alternate',iterations:Infinity,easing:'ease-in-out',fill:'both'})}catch(e){L.style.transform='translate(-461px,-139px) scale(1.512)'}
   dock.style.setProperty('left','12px','important');dock.style.setProperty('top','12px','important');dock.style.opacity='.4';
-  think('Mode cinéma — Échap (ou 🎬) pour revenir.',1)}
+  think('Mode cinéma — touchez l’écran (ou Échap) pour revenir.',1);window.__cnT0=Date.now();if(!window.__cnTap){window.__cnTap=1;document.addEventListener('pointerup',function(e){try{if(!document.body.classList.contains('bn-cine'))return;var t=e.target;if(t&&t.closest&&t.closest('#bnDock,#bnPanel,#bnC'))return;if(Date.now()-(window.__cnT0||0)<800)return;var b=document.getElementById('bnC');b&&b.click()}catch(_){}},true)}}
  else{clearInterval(CN.iv);try{CN.mo&&CN.mo.disconnect()}catch(e){}var cs=document.getElementById('bnCineCss');if(cs)cs.textContent='';document.body.classList.remove('bn-cine');CN.hid.forEach(function(x){if(x[1])x[0].style.setProperty('display',x[1],x[2]);else x[0].style.removeProperty('display')});CN.hid=[];
   if(CN.an){CN.an.cancel();CN.an=null}L.style.transform='scale('+(1600/1672)+')';dock.style.removeProperty('left');dock.style.removeProperty('top');dock.style.opacity=''}}
 function act(fn,nm){return function(ev){try{dbg(nm+' ← '+(ev?ev.type:'?'));if(ev&&ev.type==='touchend')ev.preventDefault();var t=Date.now();if(act.t&&t-act.t<450)return;act.t=t;fn()}catch(e){try{th.textContent='⚠ Erreur cerveau : '+e.message;th.classList.add('on');setTimeout(function(){th.classList.remove('on')},9000)}catch(x){}console.error('brain',e)}}}
@@ -1898,9 +1898,9 @@ var WK=[{x:350,y:465,bx:336,tl:30,i:0,d:[[318,500,'#3dff9a'],[338,515,'#ffd23a']
 WK.forEach(function(w,n){w.a=el('div',null,'bna','',L);w.a.style.left=w.x+'px';w.a.style.top=w.y+'px';w.c=el('div',null,'bnw','',L);if(n)w.c.style.right=(1672-w.bx)+'px';else w.c.style.left=w.bx+'px';w.c.style.bottom=(941-(w.y-62))+'px';w.c.style.setProperty('--tl',w.tl+'px');w.ds=w.d.map(function(q,i){var e=el('i',null,'bnd','',L);e.style.left=q[0]+'px';e.style.top=q[1]+'px';e.style.color=q[2];e.style.animationDelay=(i*.13)+'s';return e})});
 function fk(n,d){return (n/1000).toFixed(d==null?1:d).replace('.',',')}
 /* ce que dit chaque ouvrier : [texte, gravité 0-2] — gauche = consommation, droite = réacteur */
-function msgsL(){var M=[],d=dv(),h=new Date().getHours(),T=thr();
- if(D.grid>T)M.push(['⚠️ Surconsommation ! '+fk(D.grid)+' kW, le réseau dépasse le seuil !',2]);
- else if(D.grid>T*.85)M.push(['😬 Attention, je frôle le seuil réseau ('+fk(D.grid)+' kW)…',1]);
+function msgsL(){var M=[],d=dv(),h=new Date().getHours(),T=thr(),G=Math.max(D.grid,d.house||0);
+ if(G>T)M.push(['⚠️ Surcharge ! '+fk(G)+' kW, ça dépasse le seuil !',2]);
+ else if(G>T*.85)M.push(['😬 Attention, je frôle le seuil ('+fk(G)+' kW)…',1]);
  if(B.n[h]>=10&&B.prof[h]>150&&d.house>B.prof[h]*2&&d.house>900)M.push(['🤔 Conso bizarre… '+(d.house/B.prof[h]).toFixed(1).replace('.',',')+'× plus que d’habitude !',1]);
  if(d.house>3500)M.push(['😮 La maison tire '+fk(d.house)+' kW, c’est énorme !',1]);
  if(D.ev>500)M.push(['🚗 La voiture se recharge ('+fk(D.ev)+' kW)…',0]);
@@ -1917,7 +1917,7 @@ function msgsR(){var M=[],mx=0,im=0;for(var i=0;i<UN.length;i++){if((D.tmp[i]||0
 var FORCE=window.__bnForce||(window.__bnForce={});
 /* ===== données ===== */
 function dv(){try{return derived()}catch(e){return{house:0,chg:0,dis:0}}}
-function thr(){var t=(document.getElementById('rxthr')||{}).textContent||'';var m=t.match(/([\d.,]+)\s*kW/i);return m?parseFloat(m[1].replace(',','.'))*1000:4500}
+function thr(){try{if(window.__thrR&&window.__thrR()>0)return window.__thrR()}catch(e){}var t=(document.getElementById('rxthr')||{}).textContent||'';var m=t.match(/([\d.,]+)\s*kW/i);return m?parseFloat(m[1].replace(',','.'))*1000:4500}
 function learn(){var d=new Date(),h=d.getHours(),k=d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
  if(B.day!==k){B.day=k;B.kwh={pv:0,imp:0,exp:0,house:0,saved:0}}
  if(!D.live)return;var x=dv().house;B.n[h]++;var a=Math.max(.02,1/B.n[h]);B.prof[h]+=(x-B.prof[h])*a;B.tot++;
@@ -1935,8 +1935,8 @@ function fh(x){var h=Math.floor(x),m=Math.round((x-h)*60);if(m===60){h++;m=0}ret
 function score(){var k=B.kwh;if(k.house<.3)return null;return Math.max(0,Math.min(100,Math.round(100*(1-k.imp/Math.max(k.house,.1)))))}
 /* ===== moteur de règles ===== */
 var alerts=[];
-function rules(){var A=[],g=D.grid,T=thr(),h=new Date().getHours();
- if(g>T)A.push({l:2,m:'SURCHARGE RÉSEAU '+(g/1000).toFixed(1).replace('.',',')+' kW > '+(T/1000).toFixed(1).replace('.',',')+' kW'});
+function rules(){var A=[],g=Math.max(D.grid,(dv().house)||0),T=thr(),h=new Date().getHours();
+ if(g>T)A.push({l:2,m:'SURCHARGE '+(g/1000).toFixed(1).replace('.',',')+' kW > '+(T/1000).toFixed(1).replace('.',',')+' kW'});
  for(var i=0;i<UN.length;i++){var t=D.tmp[i];if(t>48)A.push({l:2,m:'BATTERIE '+(i+1)+' CHAUDE '+Math.round(t)+' °C'});else if(t>42)A.push({l:1,m:'Batterie '+(i+1)+' à '+Math.round(t)+' °C'})}
  var mean=0;for(i=0;i<UN.length;i++)mean+=D.lvl[i]||0;mean/=Math.max(1,UN.length);if(mean<10&&(h>=18||h<7))A.push({l:1,m:'Batteries presque vides ('+Math.round(mean)+' %)'});
  try{if(D.offline&&D.offline.length>2)A.push({l:1,m:D.offline.length+' capteurs hors ligne'})}catch(e){}

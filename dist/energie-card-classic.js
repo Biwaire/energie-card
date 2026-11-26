@@ -26,7 +26,7 @@
  INSTALL (EN) — drop in /config/www, add an iframe card pointing to /local/<file>.html.
     Sensors are auto-discovered (solar, grid, Izypower Titan batteries, EV, water heater, Solcast, weather).
 */
-/* Style « Classique (v2) » de la carte energie-card 1.4.5.
+/* Style « Classique (v2) » de la carte energie-card 1.4.6.
    Chargé automatiquement par energie-card.js quand ce style est choisi :
    NE PAS l'ajouter comme ressource. */
 (window.__ENERGIE_CARD_DASH = window.__ENERGIE_CARD_DASH || {})["classic"] = {
@@ -475,8 +475,8 @@ const LS={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:
 const ALR={list:[],seen:{},openSince:{},sound:LS.get('zsound')==='1',ctx:null};
 function beep(){try{if(!ALR.ctx)ALR.ctx=new (window.AudioContext||window.webkitAudioContext)();const c=ALR.ctx;[0,.3].forEach(t=>{const o=c.createOscillator(),g=c.createGain();o.frequency.value=880;o.connect(g);g.connect(c.destination);g.gain.setValueAtTime(.2,c.currentTime+t);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+t+.25);o.start(c.currentTime+t);o.stop(c.currentTime+t+.26)})}catch(e){}}
 function calcAlerts(){const L=[],hs=HS();
- {const f=battForecast();if(f&&f.stock<0.3)L.push({k:'vide',lvl:1,t:'Réserve des batteries atteinte',v:'mini '+MIN_PCT+' % · réseau en relais'});else if(f&&f.emptyBeforeSun)L.push({k:'vide',lvl:2,t:'Batteries vides avant le matin',v:'vers '+hhmm(f.empty)})}
- UN.forEach((u,i)=>{const v=D.lvl[i];if(v!==undefined&&v!==null&&v>=0&&v<=ALERT_BAT_PCT)L.push({k:'bat'+i,lvl:v<8?3:2,t:'Batterie faible',v:u.name+' '+Math.round(v)+' %'})});
+ {const f=battForecast();if(f&&(f.stock<0.3||(function(){var a=(D.lvl||[]).filter(function(v){return v>=0});return a.length&&a.reduce(function(x,y){return x+y},0)/a.length<=MIN_PCT+2&&(D.p||[]).every(function(p){return !(p<-80)})})()))L.push({k:'vide',lvl:1,t:'Réserve des batteries atteinte',v:'mini '+MIN_PCT+' % · réseau en relais'});else if(f&&f.emptyBeforeSun)L.push({k:'vide',lvl:2,t:'Batteries vides avant le matin',v:'vers '+hhmm(f.empty)})}
+ UN.forEach((u,i)=>{const v=D.lvl[i];if(v!==undefined&&v!==null&&v>=0&&v<=ALERT_BAT_PCT&&!(v>=MIN_PCT-1&&v<=MIN_PCT+2&&!((D.p||[])[i]<-80)))L.push({k:'bat'+i,lvl:v<8?3:2,t:'Batterie faible',v:u.name+' '+Math.round(v)+' %'})});
  if(D.grid>ALERT_IMPORT_W)L.push({k:'imp',lvl:2,t:'Import réseau élevé',v:fW(D.grid)});
  if(D.offline.length)L.push({k:'off',lvl:1,t:'Capteurs hors ligne',v:D.offline.length+' : '+D.offline.slice(0,2).map(o=>String(o.name).slice(0,16)).join(', ')});
  hs.cov.filter(c=>c.cls==='portail'||c.cls==='garage').forEach(c=>{if(c.state==='open'){ALR.openSince[c.id]=c.mem||ALR.openSince[c.id]||Date.now();const m=Math.floor((Date.now()-ALR.openSince[c.id])/60000);if(m>=ALERT_OPEN_MIN)L.push({k:'open'+c.id,lvl:2,t:(c.cls==='portail'?'Portail':'Porte de garage')+' ouvert',v:'depuis '+m+' min'})}else delete ALR.openSince[c.id]});
