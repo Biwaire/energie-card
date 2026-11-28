@@ -12,7 +12,8 @@ const J = s => JSON.stringify(s);
 
 function transform(SRC, profile = 'main') {
 const MAIN = profile !== 'tuyaux';
-const src = fs.readFileSync(SRC, 'utf8').replace(/\r\n/g, '\n');
+const SUP = profile === 'sup'; /* style Supervision : base Nouveau, mais configuration intégrée différente */
+let src = fs.readFileSync(SRC, 'utf8').replace(/\r\n/g, '\n');
 
 /* ---------- 1. découpage du fichier ---------- */
 const headEnd = src.indexOf('</head>');
@@ -82,9 +83,15 @@ patch("const HOUSE_TEMP='';", "const HOUSE_TEMP=__C.house_temp||'';", 'HOUSE_TEM
 patch("let WEATHER='';", "let WEATHER=__C.weather||'';", 'WEATHER');
 patch("const SOL={today:'',tomorrow:''};", "const SOL=Object.assign({today:'',tomorrow:''},__C.solcast||{});", 'SOL');
 if (MAIN) patchRe(/const ECS_TILE=\{[^\n]*?\};/, "const ECS_TILE=Object.assign({haute:'',basse:'',grande:'',desinf:''},__C.ecs_tile||{});", 'ECS_TILE');
-if (MAIN) patchRe(/const UN=\[[\s\S]*?\];\nconst BATSET=\{[^\n]*\};/,
-  "const UN=[];\nconst BATSET={};\n" +
-  "if(Array.isArray(__C.batteries)){__C.batteries.slice(0,4).forEach((b,i)=>{if(!b||!b.level)return;const id='b'+(UN.length+1);const io=!!(b.power_in||b.power_out);UN.push({id,hp:!!b.hide_power,label:b.label?String(b.label).slice(0,10):'',name:b.name||('Batterie '+(UN.length+1)),lvl:b.level,pw:io?'':(b.power||''),pin:io?(b.power_in||''):'',pout:io?(b.power_out||''):'',tmp:b.temperature||'sensor.aucun',k:(!io&&/bat_in_out/.test(b.power||'')?-1:1)*(b.invert?-1:1)*(__C.invert_bat?-1:1)});if(b.min||b.max)BATSET[id]={min:b.min||'',max:b.max||''}})}", 'UN/BATSET');
+const UN_REPL = "const UN=[];\nconst BATSET={};\n" +
+  "if(Array.isArray(__C.batteries)){__C.batteries.slice(0,4).forEach((b,i)=>{if(!b||!b.level)return;const id='b'+(UN.length+1);const io=!!(b.power_in||b.power_out);UN.push({id,hp:!!b.hide_power,label:b.label?String(b.label).slice(0,10):'',name:b.name||('Batterie '+(UN.length+1)),lvl:b.level,pw:io?'':(b.power||''),pin:io?(b.power_in||''):'',pout:io?(b.power_out||''):'',tmp:b.temperature||'sensor.aucun',k:(!io&&/bat_in_out/.test(b.power||'')?-1:1)*(b.invert?-1:1)*(__C.invert_bat?-1:1)});if(b.min||b.max)BATSET[id]={min:b.min||'',max:b.max||''}})}";
+if (MAIN) patchRe(/const UN=\[[\s\S]*?\];\nconst BATSET=\{[^\n]*\};/, UN_REPL, 'UN/BATSET');
+if (SUP) patchRe(/const UN=\[ \/\* LAISSER VIDE[\s\S]*?\*\/\];/, UN_REPL.replace('const BATSET={};\n', ''), 'UN (supervision)');
+// portail / garage : entités réglables (portail_entity, garage_entity), sinon reconnus par leur nom (« portail », « gate », « garage »)
+patch("else if(id==='cover.all_house_slidymoove')cls='portail';else if(id==='cover.all_house_io_1674235')cls='garage';",
+  "else if(id===(__C.portail_entity||'cover.all_house_slidymoove')||(!__C.portail_entity&&/portail|gate/.test(lw)))cls='portail';else if(id===(__C.garage_entity||'cover.all_house_io_1674235')||(!__C.garage_entity&&/garage/.test(lw)))cls='garage';", 'portail/garage réglables');
+if (SUP) patch("const PACKS=[1,1,1,1];", "const PACKS=Array.isArray(__C.packs)?__C.packs:[1,1,1,1];", 'PACKS (supervision)');
+if (SUP) patchRe(/const TARIF_HP=[\d.]+,TARIF_HC=[\d.]+;/, "const TARIF_HP=__C.tarif_hp!=null?+__C.tarif_hp:0.2941,TARIF_HC=__C.tarif_hc!=null?+__C.tarif_hc:0.2277;", 'TARIFS (supervision)');
 if (MAIN) patch("const PACKS=[1,1];", "const PACKS=Array.isArray(__C.packs)?__C.packs:[1,1,1,1];", 'PACKS');
 if (MAIN) patch("const KWH_PACK=4.02;", "const KWH_PACK=__C.kwh_pack!=null?+__C.kwh_pack:2.1;", 'KWH_PACK');
 // capacité propre à chaque batterie (kWh) : prioritaire sur packs × capacité d'un pack
@@ -170,6 +177,11 @@ code += `
 
 /* ---------- style « Tuyaux » (salle de tazzdel) : son moteur batteries « toutes marques » est gardé ---------- */
 if (!MAIN) {
+// flux des 4 tuyaux de batteries : suivent l'axe des tuyaux et leurs coudes
+patch("['M701.2 331.3 C699.1 331.2 693.5 330.6 688.6 330.4 C683.7 330.2 677.6 330.2 671.8 329.9 C665.9 329.7 659.7 329.3 653.7 329.0 C647.6 328.8 641.5 328.5 635.4 328.6 C629.2 328.6 623.0 328.9 616.9 329.4 C610.8 329.9 604.4 330.2 598.6 331.6 C592.8 333.1 586.9 334.9 581.9 338.1 C577.0 341.3 572.7 345.9 568.9 350.9 C565.2 355.9 562.4 362.2 559.4 368.1 C556.5 374.0 554.2 380.6 551.1 386.5 C548.0 392.4 544.7 398.3 540.7 403.5 C536.8 408.7 532.2 413.4 527.5 417.9 C522.8 422.3 517.5 426.2 512.5 430.1 C507.6 434.0 502.2 438.0 497.9 441.3 C493.6 444.6 488.5 448.3 486.6 449.7','#4dff8a',0]", "['M701.0 331.0 C662.7 330.5 624.3 329.9 586.0 329.4 C569.5 329.2 556.0 342.5 556.0 359.0 C556.0 369.5 556.0 380.0 556.0 390.5 C556.0 406.7 542.7 420.0 526.5 420.0 C526.5 420.0 526.5 420.0 526.5 420.0 C510.3 420.0 497.0 433.3 497.0 449.5 C497.0 449.7 497.0 449.8 497.0 450.0','#4dff8a',0]", "flux batterie 0 : coudes");
+patch("['M707.3 392.6 C705.1 392.8 699.6 393.5 694.6 394.1 C689.6 394.7 683.2 395.2 677.2 396.1 C671.1 396.9 664.3 397.6 658.2 399.2 C652.1 400.8 645.8 402.6 640.6 405.6 C635.4 408.7 630.8 412.7 627.2 417.3 C623.7 421.8 621.3 427.8 619.5 432.9 C617.7 438.0 616.8 445.3 616.3 447.7','#4dff8a',1]", "['M707.0 400.0 C692.7 400.0 678.3 400.0 664.0 400.0 C644.2 400.0 628.0 416.2 628.0 436.0 C628.0 440.7 628.0 445.3 628.0 450.0','#4dff8a',1]", "flux batterie 1 : coudes");
+patch("['M955.2 393.4 C957.4 393.6 963.0 393.9 968.0 394.5 C973.1 395.1 979.5 395.6 985.5 396.9 C991.5 398.2 998.2 399.6 1004.0 402.0 C1009.9 404.4 1015.9 407.4 1020.5 411.2 C1025.2 415.0 1029.0 419.9 1031.9 424.7 C1034.7 429.6 1036.2 435.7 1037.7 440.4 C1039.3 445.1 1040.6 450.9 1041.1 453.0','#4dff8a',2]", "['M955.0 400.0 C968.0 400.0 981.0 400.0 994.0 400.0 C1013.8 400.0 1030.0 416.2 1030.0 436.0 C1030.0 441.7 1030.0 447.3 1030.0 453.0','#4dff8a',2]", "flux batterie 2 : coudes");
+patch("['M959.0 329.0 C961.2 328.9 966.9 328.1 972.0 328.2 C977.0 328.2 983.4 329.0 989.4 329.3 C995.4 329.7 1001.8 330.3 1008.1 330.2 C1014.3 330.2 1020.6 329.3 1026.8 329.0 C1032.9 328.7 1039.1 328.0 1045.0 328.3 C1050.9 328.7 1057.0 328.3 1062.4 330.9 C1067.8 333.6 1073.0 339.7 1077.5 344.2 C1082.0 348.6 1085.8 352.6 1089.3 357.7 C1092.8 362.7 1095.4 368.9 1098.4 374.5 C1101.3 380.1 1103.8 386.1 1107.2 391.4 C1110.6 396.7 1114.5 401.7 1118.7 406.3 C1123.0 411.0 1128.2 415.0 1132.7 419.5 C1137.3 423.9 1141.9 428.6 1146.0 432.9 C1150.2 437.3 1155.7 443.5 1157.6 445.6','#4dff8a',3]", "['M959.0 329.0 C992.7 328.7 1026.3 328.5 1060.0 328.2 C1076.5 328.1 1090.0 341.5 1090.0 358.0 C1090.0 370.7 1090.0 383.3 1090.0 396.0 C1090.0 412.5 1103.5 426.0 1120.0 426.0 C1122.0 426.0 1124.0 426.0 1126.0 426.0 C1139.2 426.0 1150.0 436.8 1150.0 450.0 C1150.0 450.0 1150.0 450.0 1150.0 450.0','#4dff8a',3]", "flux batterie 3 : coudes");
 patch("['M833.8 218.7 C833.8 204.7 833.8 149.0 833.8 135.1','#4de1ff','house']", "['M832.0 218.7 C832.0 204.7 832.0 149.0 832.0 135.1','#4de1ff','house']", 'flux maison centré');
 // flux des tuyaux du haut (solaire jaune, réseau rouge) recentrés sur l'axe des tuyaux de l'image
 patch("['M670.4 135.1 C676.7 142.9 695.7 167.8 708.4 182.2 C721.1 196.6 740.1 215.1 746.4 221.7','#ffd24a','pv']", "['M663.0 134.0 C682.3 163.3 701.7 192.7 721.0 222.0','#ffd24a','pv']", 'flux solaire centré');
@@ -333,6 +345,10 @@ if (MAIN) code = code.replace(/const BX=\[0,1,2,3\]\.map\(i=>\{const n=Math\.max
 // option « Masquer les watts » par batterie (extensions LINK sans capteur de puissance) : tous les styles
 patch("const cBt=card('rxbt'", "try{const __hp=UN.map((u,i)=>u.hp?i:-1).filter(i=>i>=0);if(__hp.length){const __s=document.createElement('style');__s.textContent=__hp.map(i=>'#bw'+i+',#lbw'+i+'{visibility:hidden!important}#lZd>div:nth-child('+(i+1)+'){display:none!important}').join('');document.head.appendChild(__s);__hp.forEach(i=>{if(cZ[i]&&cZ[i].zw)cZ[i].zw.style.visibility='hidden'})}}catch(e){}\nconst cBt=card('rxbt'", 'masquer les watts');
 
+if (SUP) { /* fonctions absentes de ce style : on ignore leurs retouches */
+  const OPT = ['MODULES début', 'MODULES fin', 'ECS_TILE', 'UN/BATSET', 'PACKS', 'TARIFS', 'rappels masqués', 'tuile marque', 'libellés courts', 'masquer les watts'];
+  for (let i = FAILS.length - 1; i >= 0; i--) if (OPT.some((o) => FAILS[i].indexOf('« ' + o + ' »') >= 0)) FAILS.splice(i, 1);
+}
 if (FAILS.length) throw new Error(SRC + ' :\n' + FAILS.join('\n'));
 const header = comments.map(c => '/*' + c.replace(/\*\//g, '* /') + '*/').join('\n');
 const dash = '{\nSTYLES: [\n' + stylesOut.map(s => `{id:${J(s.id)},css:${J(s.css)}}`).join(',\n') + '\n],\nHTML: [\n' + html.map(J).join(',\n') +
@@ -372,5 +388,6 @@ try {
     buildMain(new URL('../src/energie.html', import.meta.url), new URL('../dist/energie-card.js', import.meta.url));
     buildClassic(new URL('../src/energie-classic.html', import.meta.url), new URL('../dist/energie-card-classic.js', import.meta.url));
     buildClassic(new URL('../src/energie-tuyaux.html', import.meta.url), new URL('../dist/energie-card-tuyaux.js', import.meta.url), 'tuyaux', 'Tuyaux (salle de tazzdel)', 'tuyaux');
+    buildClassic(new URL('../src/energie-supervision.html', import.meta.url), new URL('../dist/energie-card-supervision.js', import.meta.url), 'supervision', 'Supervision', 'sup');
   }
 } catch (e) { console.error(e.message); process.exit(1); }

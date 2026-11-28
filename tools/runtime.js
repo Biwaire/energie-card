@@ -15,8 +15,8 @@ console.info('%c ENERGIE-CARD %c ' + VERSION + ' ', 'color:#05080f;background:#2
 
 /* tableaux de bord disponibles : « new » est inclus, « classic » est chargé à la demande (fichier voisin) */
 const DASH = window.__ENERGIE_CARD_DASH = window.__ENERGIE_CARD_DASH || {};
-const STYLE_FILES = { classic: 'energie-card-classic.js', tuyaux: 'energie-card-tuyaux.js' };
-const STYLE_NAMES = { new: 'Nouveau', classic: 'Classique', tuyaux: 'Tuyaux' };
+const STYLE_FILES = { classic: 'energie-card-classic.js', tuyaux: 'energie-card-tuyaux.js', supervision: 'energie-card-supervision.js' };
+const STYLE_NAMES = { new: 'Nouveau', classic: 'Classique', tuyaux: 'Tuyaux', supervision: 'Supervision' };
 const LOADS = {};
 let BASE_URL = '';
 try { BASE_URL = import.meta.url; } catch (e) {}
@@ -103,7 +103,7 @@ class EnergieCard extends HTMLElement {
   static getStubConfig() { return {}; }
   static getConfigElement() { return document.createElement(TAG + '-editor'); }
 
-  _styleKey() { const s = this._config.style; return s === 'classic' || s === 'tuyaux' ? s : 'new'; }
+  _styleKey() { const s = this._config.style; return s === 'classic' || s === 'tuyaux' || s === 'supervision' ? s : 'new'; }
 
   _maybeStart(force) {
     if (this._run || this._loading || !this.isConnected) return;
@@ -313,6 +313,7 @@ class EnergieCard extends HTMLElement {
     this._fullscreen(zh, root, run);
     this._swipe(root, zh, zb);
     this._modeAuto(zh, root, run);
+    this._buttons(zh, root, run);
     run.drag = ['vsw', 'thbtn', 'fsbtn'].map(id => this._draggable(root.getElementById(id), zh, id, run)).filter(Boolean);
   }
 
@@ -345,6 +346,90 @@ class EnergieCard extends HTMLElement {
     });
     const iv = setInterval(() => { if (!arm) paint(); }, 1000); run.intervals.add(iv);
     paint();
+  }
+
+  /* boutons personnalisés (option buttons:) : prises Shelly, lumières, volets, scripts, scènes…
+     appui = basculer, appui long = fenêtre détail de Home Assistant */
+  _buttons(zh, root, run) {
+    const list = (Array.isArray(this._config.buttons) ? this._config.buttons : []).filter(b => b && b.entity).slice(0, 8);
+    if (!list.length) return;
+    const card = this, D = document;
+    const DEF = { switch: 'mdi:power-socket-eu', light: 'mdi:lightbulb', cover: 'mdi:window-shutter', fan: 'mdi:fan', script: 'mdi:script-text-play',
+      scene: 'mdi:palette', button: 'mdi:gesture-tap-button', input_boolean: 'mdi:toggle-switch', climate: 'mdi:thermostat', media_player: 'mdi:television' };
+    // les boutons se rangent dans le panneau « Maison · commandes », à droite des tuiles (chauffage, chauffe-eau…)
+    const pc = root.getElementById('pCt');
+    const bar = D.createElement('div'); bar.id = 'btnbar';
+    const nCol = list.length <= 2 ? 1 : list.length <= 4 ? 2 : 3, BW = 170, GAP = 8;
+    bar.style.cssText = 'position:absolute;z-index:5;display:grid;grid-template-rows:1fr 1fr;grid-auto-flow:column;grid-template-columns:repeat(' + nCol + ',' + BW + 'px);gap:' + GAP + 'px';
+    if (pc) pc.appendChild(bar); else { bar.style.cssText += ';left:0;right:0;bottom:3%;margin:0 auto;width:max-content;z-index:61'; zh.appendChild(bar); }
+    const FLOAT = ';position:absolute;z-index:61;left:0;right:0;bottom:3%;top:auto;height:52px;margin:0 auto;width:max-content';
+    const place = () => {
+      if (!pc) return;
+      if (pc.style.display === 'none') pc.style.display = '';
+      if (getComputedStyle(pc).visibility === 'hidden') {             // Tuyaux : panneau « Batteries · entrée / sortie » (là où se met le chauffe-eau)
+        const z = root.getElementById('lZd'), lp = z && z.parentNode;
+        if (lp) {
+          if (bar.parentNode !== lp) { lp.appendChild(bar); bar.style.cssText = 'position:absolute;z-index:5;display:grid;gap:6px;left:12px;right:12px;grid-auto-flow:row;grid-template-columns:repeat(' + Math.min(3, list.length) + ',1fr)'; }
+          const kids = [...lp.children].filter(c => c !== bar && c.offsetHeight);
+          const top = Math.max(...kids.map(c => c.offsetTop + c.offsetHeight)) + 8, h = lp.clientHeight - top - 10;
+          bar.style.top = top + 'px'; bar.style.height = Math.max(28, h) + 'px';
+          bar.style.gridTemplateRows = 'repeat(' + Math.ceil(list.length / 3) + ',1fr)';
+          items.forEach(it => { it.b.style.fontSize = list.length > 3 ? '12px' : '14px'; it.b.style.padding = '0 8px'; });
+          return;
+        }
+        if (bar.parentNode !== zh) { zh.appendChild(bar); bar.style.cssText += FLOAT; bar.style.gridTemplateRows = '1fr'; }
+        return;
+      }
+      if (bar.parentNode !== pc) { pc.appendChild(bar); bar.style.margin = '0'; bar.style.bottom = 'auto'; bar.style.right = 'auto'; bar.style.width = 'auto'; bar.style.zIndex = '5'; bar.style.gridTemplateRows = '1fr 1fr'; }
+      const tiles = [...pc.querySelectorAll(':scope>.tile')].filter(t => t.style.display !== 'none' && t.offsetWidth);
+      const top = tiles.length ? tiles[0].offsetTop : 38, h = tiles.length ? tiles[0].offsetHeight : 108;
+      const aw = nCol * BW + (nCol - 1) * GAP, ax = pc.clientWidth - 14 - aw;
+      bar.style.left = ax + 'px'; bar.style.top = top + 'px'; bar.style.height = h + 'px';
+      if (tiles.length && Math.max(...tiles.map(t => t.offsetLeft + t.offsetWidth)) > ax - 10) {   // tuiles trop larges : on les resserre à gauche
+        const tw = Math.floor((ax - 10 - 14 - (tiles.length - 1) * 9) / tiles.length);
+        tiles.forEach((t, k) => { t.style.width = tw + 'px'; t.style.left = (14 + k * (tw + 9)) + 'px'; t.style.right = 'auto'; t.style.flex = 'none'; });
+      }
+    };
+    const items = list.map(cfg => {
+      const b = D.createElement('button'); b.type = 'button';
+      b.style.cssText = 'display:flex;align-items:center;gap:8px;min-width:0;padding:0 12px;border-radius:14px;cursor:pointer;font:700 15px Inter,Roboto,sans-serif;white-space:nowrap;overflow:hidden;transition:all .25s';
+      const dom = cfg.entity.split('.')[0], ic = cfg.icon || DEF[dom] || 'mdi:power';
+      const icEl = /^mdi:/.test(ic) && customElements.get('ha-icon') ? Object.assign(D.createElement('ha-icon'), { icon: ic }) : Object.assign(D.createElement('span'), { textContent: /^mdi:/.test(ic) ? '⏻' : ic });
+      icEl.style.cssText = '--mdc-icon-size:20px;font-size:18px;line-height:1;display:flex';
+      const tx = D.createElement('span'), pw = D.createElement('span'); tx.style.cssText = 'overflow:hidden;text-overflow:ellipsis;flex:1;text-align:left'; pw.style.cssText = 'font-weight:600;font-size:12px;opacity:.8';
+      b.append(icEl, tx, pw); bar.appendChild(b);
+      let lp = 0, lpT = 0;
+      const more = () => card.dispatchEvent(new CustomEvent('hass-more-info', { bubbles: true, composed: true, detail: { entityId: cfg.entity } }));
+      b.addEventListener('pointerdown', e => { e.stopPropagation(); lp = 0; lpT = setTimeout(() => { lp = 1; more(); }, 600); });
+      ['pointerup', 'pointerleave', 'pointercancel'].forEach(t => b.addEventListener(t, () => clearTimeout(lpT)));
+      b.addEventListener('click', e => {
+        e.stopPropagation(); if (lp || !card._hass) return;
+        const [d2, svc] = dom === 'script' ? ['script', 'turn_on'] : dom === 'scene' ? ['scene', 'turn_on'] : dom === 'button' || dom === 'input_button' ? [dom, 'press']
+          : dom === 'cover' ? ['cover', 'toggle'] : dom === 'lock' ? ['lock', (card._hass.states[cfg.entity] || {}).state === 'locked' ? 'unlock' : 'lock'] : ['homeassistant', 'toggle'];
+        card._hass.callService(d2, svc, { entity_id: cfg.entity });
+        b.style.transform = 'scale(.94)'; setTimeout(() => b.style.transform = '', 150);
+      });
+      return { b, tx, pw, cfg, dom };
+    });
+    const fmt = w => Math.abs(w) >= 1000 ? (w / 1000).toFixed(1).replace('.', ',') + ' kW' : Math.round(w) + ' W';
+    const paint = () => {
+      const H = card._hass; if (!H) return;
+      items.forEach(it => {
+        const s = H.states[it.cfg.entity], st = s ? s.state : 'unavailable', na = st === 'unavailable' || st === 'unknown';
+        const on = ['on', 'open', 'opening', 'playing', 'unlocked', 'heat', 'cool', 'auto'].includes(st);
+        const col = na ? '#7d8da3' : on ? '#2dff8a' : '#9fb3c8';
+        it.b.style.color = col; it.b.style.border = '1.5px solid ' + (on ? col : 'rgba(150,175,200,.35)');
+        it.b.style.background = on ? 'rgba(20,60,40,.85)' : 'rgba(8,18,32,.85)';
+        it.b.style.boxShadow = on ? '0 0 14px rgba(45,255,138,.35)' : 'none';
+        it.tx.textContent = it.cfg.name || (s && s.attributes.friendly_name) || it.cfg.entity;
+        let w = null;
+        if (it.cfg.power && H.states[it.cfg.power]) w = parseFloat(H.states[it.cfg.power].state);
+        else if (s && s.attributes) w = parseFloat(s.attributes.current_power_w ?? s.attributes.power ?? NaN);
+        it.pw.textContent = isFinite(w) && on ? fmt(w) : '';
+        it.b.title = (it.cfg.name || it.cfg.entity) + ' : ' + (na ? 'indisponible' : st) + ' · appui long = détails';
+      });
+    };
+    const iv = setInterval(() => { paint(); place(); }, 1000); run.intervals.add(iv); paint(); place(); setTimeout(place, 300);
   }
 
   /* bouton plein écran : vrai plein écran si possible, sinon la carte couvre tout l'écran de l'application (iPhone) */
@@ -392,6 +477,7 @@ class EnergieCard extends HTMLElement {
   /* écran tactile : glisser horizontalement sur le tableau pour passer d'une vue à l'autre */
   _swipe(root, zh, zb) {
     if (this._config.swipe === false) return;
+    if (this._styleKey() === 'supervision') return;   // Supervision : une seule vue (Énergie), pas de flèche ni de glissement
     const SKIP = 'input,textarea,select,canvas,[contenteditable],#vsw,#varrow,#thbtn,#fsbtn,#autobtn,#hamb,#wbtn,#vdots';
     const OPEN = '#panel.on,#menu.on,#hist.on,#cfm.on,#hmenu.on';
     const scrollsX = el => {

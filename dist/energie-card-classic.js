@@ -26,7 +26,7 @@
  INSTALL (EN) — drop in /config/www, add an iframe card pointing to /local/<file>.html.
     Sensors are auto-discovered (solar, grid, Izypower Titan batteries, EV, water heater, Solcast, weather).
 */
-/* Style « Classique (v2) » de la carte energie-card 1.5.0.
+/* Style « Classique (v2) » de la carte energie-card 1.6.0.
    Chargé automatiquement par energie-card.js quand ce style est choisi :
    NE PAS l'ajouter comme ressource. */
 (window.__ENERGIE_CARD_DASH = window.__ENERGIE_CARD_DASH || {})["classic"] = {
@@ -655,7 +655,7 @@ const MENU={open:false,tab:'scen',drag:false};
 function buildHome(st){const cov=[],cli=[],scn=[];
  for(const id in st){const s=st[id],a=s.attributes||{},nm=a.friendly_name||id,low=(nm+' '+id).toLowerCase();
   if(id.startsWith('scene.')||id.startsWith('script.'))scn.push({id,name:nm});
-  if(id.startsWith('cover.')){let cls='volet';const dc=a.device_class,lw=nm.toLowerCase();if(dc==='window'||/window|vitre|fen[eê]tre|toit ouvrant|sunroof|coffre|trunk|capot|hood|low.?speed/.test(low))cls='autre';else if(id==='cover.all_house_slidymoove')cls='portail';else if(id==='cover.all_house_io_1674235')cls='garage';else if(/volet|store|shutter|blind/.test(lw))cls='volet';else if(dc==='garage'||/garage/.test(lw))cls='garage';else if(dc==='gate'||/portail|portillon|\bgate\b/.test(lw))cls='portail';
+  if(id.startsWith('cover.')){let cls='volet';const dc=a.device_class,lw=nm.toLowerCase();if(dc==='window'||/window|vitre|fen[eê]tre|toit ouvrant|sunroof|coffre|trunk|capot|hood|low.?speed/.test(low))cls='autre';else if(id===(__C.portail_entity||'cover.all_house_slidymoove')||(!__C.portail_entity&&/portail|gate/.test(lw)))cls='portail';else if(id===(__C.garage_entity||'cover.all_house_io_1674235')||(!__C.garage_entity&&/garage/.test(lw)))cls='garage';else if(/volet|store|shutter|blind/.test(lw))cls='volet';else if(dc==='garage'||/garage/.test(lw))cls='garage';else if(dc==='gate'||/portail|portillon|\bgate\b/.test(lw))cls='portail';
    if(cls!=='autre'){let stt=s.state,mem=null;if((cls==='portail'&&stt!=='opening'&&stt!=='closing')||(cls==='volet'&&(stt==='unknown'||stt==='unavailable'))){mem=gateMem(id);if(mem&&cls==='portail'&&mem.s==='open'&&Date.now()-mem.t>GATE_EXPIRE_MIN*60000)mem=null;if(mem)stt=mem.s;else stt='unknown'}cov.push({id,name:nm,state:optState(id,stt),pos:cls==='portail'?undefined:(mem&&cls==='volet'?(mem.p!==undefined?mem.p:undefined):a.current_position),cls,mem:mem?mem.t:(cls==='portail'?0:undefined),feat:a.supported_features===undefined?15:a.supported_features})}}
   else if(id.startsWith('climate.')&&!/room.?temperature/.test(low))cli.push({id,name:nm,cur:a.current_temperature,target:a.temperature,mode:s.state,action:a.hvac_action,modes:a.hvac_modes||['off','heat'],presets:a.preset_modes,preset:a.preset_mode,min:a.min_temp||7,max:a.max_temp||30,step:a.target_temp_step||a.target_temperature_step||.5,tt:a.temperature!==undefined&&a.temperature!==null})
   else if(id.startsWith('switch.')&&/chauffage|radiateur|convecteur|seche|sèche/.test(low))cli.push({id,name:nm,sw:true,mode:s.state==='on'?'heat':'off',action:s.state==='on'?'heating':'off',modes:['off','heat']})}

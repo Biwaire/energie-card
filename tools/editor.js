@@ -16,7 +16,14 @@ const LABELS = {
   haute: 'Sonde haute', basse: 'Sonde basse', grande: 'Grande chauffe', desinf: 'Dernière désinfection',
   name: 'Nom affiché', label: 'Nom court (vue Énergie, ex. T1)', level: 'Niveau (%)', power: 'Puissance charge/décharge (W)', power_in: 'Ou : puissance entrée / charge (W)', power_out: 'Ou : puissance sortie / décharge (W)', temperature: 'Température',
   min: 'Réglage du mini (number.*)', max: 'Réglage du maxi (number.*)', invert: 'Charge/décharge inversée', hide_power: 'Masquer les watts (ex. extension LINK sans capteur)',
-  portail: 'Portail', garage: 'Porte de garage', volets: 'Volets', chauffage: 'Chauffage', scenarios: 'Scénarios',
+  btn1: 'Bouton 1',
+  btn2: 'Bouton 2',
+  btn3: 'Bouton 3',
+  btn4: 'Bouton 4',
+  btn5: 'Bouton 5',
+  btn6: 'Bouton 6',
+  portail: 'Portail', garage: 'Porte de garage', portail_entity: 'Entité du portail', garage_entity: 'Entité de la porte de garage',
+  buttons: 'Boutons personnalisés', name: 'Nom', entity: 'Entité', icon: 'Icône', power: 'Consommation (optionnel)', volets: 'Volets', chauffage: 'Chauffage', scenarios: 'Scénarios',
   voiture: 'Voiture électrique', ballon: 'Ballon d’eau chaude', rappels: 'Rappels 🔔', chauffeeau: 'Tuile chauffe-eau', watt: 'Assistant Watt 👷',
   tarif_hp: 'Prix heures pleines (€/kWh)', tarif_hc: 'Prix heures creuses (€/kWh)', hc_text: 'Heures creuses',
   pv_max: 'Puissance crête des panneaux (W)', kwh_pack: 'Capacité d’un pack (kWh)', packs_text: 'Packs par batterie',
@@ -27,7 +34,7 @@ const HELPERS = {
   capacity: 'À additionner. Isypower/Izypower : Titan seul 2,1 · Link 2,1 · nouveau Link 4,032. Zendure : AB1000 0,96 · AB2000 1,92 · AB3000L 2,88 · SolarFlow 2400 AC+ 2,4 (batterie intégrée). Vide = packs × capacité d’un pack.',
   kwh_pack: 'Utilisé seulement pour les batteries sans capacité indiquée (2,1 = un Titan seul)',
   brand: 'Automatique : selon les batteries détectées',
-  style: 'Nouveau : vue Réacteur sombre et nette. Classique : salle des machines claire (version d’origine). Tuyaux : salle aux tuyaux bleus de tazzdel, détection de batteries toutes marques.',
+  style: 'Nouveau : vue Réacteur sombre et nette. Classique : salle des machines claire (version d’origine). Tuyaux : salle aux tuyaux bleus de tazzdel, détection de batteries toutes marques. Supervision : poste de supervision, laboratoire domestique.',
   hc_text: 'Une ou plusieurs plages, ex. 22:00-06:00 ou 01:04-06:34, 14:34-17:04',
   packs_text: 'Dans l’ordre des batteries, ex. 1, 2',
   fit_screen: 'La carte entière reste visible sans défiler',
@@ -45,7 +52,7 @@ const bat = i => ({ type: 'expandable', name: 'bat' + i, title: 'Batterie ' + i,
 const NUM = (step, unit) => ({ number: { mode: 'box', step, unit_of_measurement: unit } });
 const SCHEMA = [
   { name: 'style', selector: { select: { mode: 'dropdown', options: [
-    { value: 'new', label: 'Nouveau (v2.7)' }, { value: 'classic', label: 'Classique (v2)' }, { value: 'tuyaux', label: 'Tuyaux (salle de tazzdel)' }] } } },
+    { value: 'new', label: 'Nouveau (v2.7)' }, { value: 'classic', label: 'Classique (v2)' }, { value: 'tuyaux', label: 'Tuyaux (salle de tazzdel)' }, { value: 'supervision', label: 'Supervision' }] } } },
   { type: 'expandable', name: 'entities', title: 'Capteurs principaux', icon: 'mdi:solar-power', schema: [
     { name: 'pv', selector: SENSOR }, { name: 'grid', selector: SENSOR }, { name: 'ev', selector: SENSOR },
     { name: 'evSoc', selector: SENSOR }, { name: 'evRange', selector: SENSOR }, { name: 'evLid', selector: { entity: {} } },
@@ -63,6 +70,12 @@ const SCHEMA = [
   { type: 'expandable', name: 'modules', title: 'Éléments affichés', icon: 'mdi:view-dashboard-edit', schema: [
     { type: 'grid', name: '', schema: ['voiture', 'ballon', 'chauffeeau', 'chauffage', 'scenarios', 'volets', 'portail', 'garage', 'rappels', 'watt']
       .map(n => ({ name: n, selector: { boolean: {} } })) }] },
+  { type: 'grid', name: '', schema: [{ name: 'portail_entity', selector: ENT('cover') }, { name: 'garage_entity', selector: ENT('cover') }] },
+  { type: 'expandable', name: '', flatten: true, title: 'Boutons personnalisés (6 maximum)', icon: 'mdi:gesture-tap-button', schema: [1, 2, 3, 4, 5, 6].map(i => ({
+    type: 'expandable', name: 'btn' + i, title: 'Bouton ' + i, schema: [
+      { type: 'grid', name: '', schema: [{ name: 'name', selector: { text: {} } }, { name: 'icon', selector: { icon: {} } }] },
+      { name: 'entity', selector: { entity: { domain: ['switch', 'light', 'cover', 'fan', 'script', 'scene', 'button', 'input_boolean', 'input_button', 'lock', 'media_player', 'climate'] } } },
+      { name: 'power', selector: SENSOR }] })) },
   { type: 'expandable', name: '', flatten: true, title: 'Tarifs et heures creuses', icon: 'mdi:currency-eur', schema: [
     { type: 'grid', name: '', schema: [{ name: 'tarif_hp', selector: NUM(0.0001, '€/kWh') }, { name: 'tarif_hc', selector: NUM(0.0001, '€/kWh') }] },
     { name: 'hc_text', selector: { text: {} } }] },
@@ -84,7 +97,7 @@ const MOD_DEFAULTS = { portail: false, garage: false, volets: false, chauffage: 
 /* config ⇄ données du formulaire */
 function toForm(c) {
   const d = Object.assign({}, c);
-  d.style = c.style === 'classic' || c.style === 'tuyaux' ? c.style : 'new';
+  d.style = c.style === 'classic' || c.style === 'tuyaux' || c.style === 'supervision' ? c.style : 'new';
   d.brand = c.brand || 'auto';
   d.fit_screen = c.fit_screen !== false;
   d.fullscreen_button = c.fullscreen_button !== false;
@@ -92,6 +105,8 @@ function toForm(c) {
   d.modules = Object.assign({}, MOD_DEFAULTS, c.modules || {});
   (c.batteries || []).slice(0, 4).forEach((b, i) => { d['bat' + (i + 1)] = Object.assign({}, b); });
   delete d.batteries;
+  (c.buttons || []).slice(0, 6).forEach((b, i) => { d['btn' + (i + 1)] = Object.assign({}, b); });
+  delete d.buttons;
   if (Array.isArray(c.hc_plages)) d.hc_text = c.hc_plages.map(p => p[0] + '-' + p[1]).join(', ');
   if (Array.isArray(c.packs)) d.packs_text = c.packs.join(', ');
   delete d.hc_plages; delete d.packs;
@@ -107,8 +122,9 @@ function clean(o) {
 }
 function fromForm(d, type) {
   const c = { type };
-  const bats = [];
+  const bats = [], btns = [];
   Object.keys(d).forEach(k => {
+    if (/^btn[1-6]$/.test(k)) { const b = clean(d[k]); if (b && b.entity) btns[+k.slice(3) - 1] = b; return; }
     if (/^bat[1-4]$/.test(k)) { const b = clean(d[k]); if (!empty(b)) bats[+k.slice(3) - 1] = b; return; }
     if (k === 'hc_text') {
       const p = String(d[k] || '').split(/[,;]/).map(x => x.trim().match(/^(\d{1,2}[:h]\d{2})\s*[-–à]+\s*(\d{1,2}[:h]\d{2})$/)).filter(Boolean)
@@ -122,7 +138,7 @@ function fromForm(d, type) {
       if (Object.keys(m).length) c.modules = m;
       return;
     }
-    if (k === 'style') { if (d[k] === 'classic' || d[k] === 'tuyaux') c.style = d[k]; return; }
+    if (k === 'style') { if (d[k] === 'classic' || d[k] === 'tuyaux' || d[k] === 'supervision') c.style = d[k]; return; }
     if (k === 'brand') { if (d[k] && d[k] !== 'auto') c.brand = d[k]; return; }
     if (k === 'fit_screen' || k === 'fullscreen_button' || k === 'swipe') { if (d[k] === false) c[k] = false; return; }
     if (k !== 'type') c[k] = d[k];
@@ -130,6 +146,7 @@ function fromForm(d, type) {
   // on garde la position de chaque batterie (Batterie 2 et 3 seules → emplacements 2 et 3)
   const list = bats.some(Boolean) ? Array.from({ length: bats.length }, (_, i) => bats[i] || {}) : [];
   if (list.length) c.batteries = list;
+  if (btns.some(Boolean)) c.buttons = btns.filter(Boolean);
   return clean(c);
 }
 
