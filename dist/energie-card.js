@@ -28,7 +28,7 @@
 */
 /*
  ╔══════════════════════════════════════════════════════════════════════╗
- ║  ENERGIE-CARD 1.6.0 — carte Lovelace (custom:energie-card)            ║
+ ║  ENERGIE-CARD 1.6.1 — carte Lovelace (custom:energie-card)            ║
  ╚══════════════════════════════════════════════════════════════════════╝
  Installation : HACS (dépôt personnalisé, type « Tableau de bord ») ou manuelle (voir README).
  Configuration : éditeur visuel de la carte. Sans réglage, les capteurs sont détectés automatiquement.
@@ -36,14 +36,14 @@
 */
 (() => {
 'use strict';
-const TAG = 'energie-card', VERSION = '1.6.0';
+const TAG = 'energie-card', VERSION = '1.6.1';
 if (customElements.get(TAG)) return;
 console.info('%c ENERGIE-CARD %c ' + VERSION + ' ', 'color:#05080f;background:#2dff8a;font-weight:700', 'color:#2dff8a;background:#05080f');
 
 /* tableaux de bord disponibles : « new » est inclus, « classic » est chargé à la demande (fichier voisin) */
 const DASH = window.__ENERGIE_CARD_DASH = window.__ENERGIE_CARD_DASH || {};
-const STYLE_FILES = { classic: 'energie-card-classic.js', tuyaux: 'energie-card-tuyaux.js', supervision: 'energie-card-supervision.js' };
-const STYLE_NAMES = { new: 'Nouveau', classic: 'Classique', tuyaux: 'Tuyaux', supervision: 'Supervision' };
+const STYLE_FILES = { classic: 'energie-card-classic.js', tuyaux: 'energie-card-tuyaux.js' };
+const STYLE_NAMES = { new: 'Nouveau', classic: 'Classique', tuyaux: 'Tuyaux' };
 const LOADS = {};
 let BASE_URL = '';
 try { BASE_URL = import.meta.url; } catch (e) {}
@@ -1935,7 +1935,7 @@ class EnergieCard extends HTMLElement {
   static getStubConfig() { return {}; }
   static getConfigElement() { return document.createElement(TAG + '-editor'); }
 
-  _styleKey() { const s = this._config.style; return s === 'classic' || s === 'tuyaux' || s === 'supervision' ? s : 'new'; }
+  _styleKey() { const s = this._config.style; return s === 'classic' || s === 'tuyaux' ? s : 'new'; }
 
   _maybeStart(force) {
     if (this._run || this._loading || !this.isConnected) return;
@@ -2191,36 +2191,73 @@ class EnergieCard extends HTMLElement {
     // les boutons se rangent dans le panneau « Maison · commandes », à droite des tuiles (chauffage, chauffe-eau…)
     const pc = root.getElementById('pCt');
     const bar = D.createElement('div'); bar.id = 'btnbar';
-    const nCol = list.length <= 2 ? 1 : list.length <= 4 ? 2 : 3, BW = 170, GAP = 8;
-    bar.style.cssText = 'position:absolute;z-index:5;display:grid;grid-template-rows:1fr 1fr;grid-auto-flow:column;grid-template-columns:repeat(' + nCol + ',' + BW + 'px);gap:' + GAP + 'px';
+    const BIG = list.length <= 2;                                    // 1 ou 2 boutons : vraies tuiles pleine hauteur
+    const nCol = BIG ? list.length : list.length <= 4 ? 2 : 3, BW = BIG ? 200 : 170, GAP = BIG ? 10 : 8, ROWS = BIG ? '1fr' : '1fr 1fr';
+    bar.style.cssText = 'position:absolute;z-index:5;display:grid;grid-template-rows:' + ROWS + ';grid-auto-flow:column;grid-template-columns:repeat(' + nCol + ',' + BW + 'px);grid-auto-columns:' + BW + 'px;gap:' + GAP + 'px;overflow-x:auto;overflow-y:hidden;scroll-behavior:smooth;scrollbar-width:none;scroll-snap-type:x mandatory';
+    { const st = D.createElement('style'); st.textContent = '#btnbar::-webkit-scrollbar{display:none}#btnbar>button{scroll-snap-align:start}'; root.appendChild(st); }
+    const arrow = (txt, dir) => { const a = D.createElement('button'); a.type = 'button'; a.textContent = txt;
+      a.style.cssText = 'position:absolute;z-index:7;display:none;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;cursor:pointer;font:800 22px Inter,Roboto,sans-serif;color:#cfe8ff;background:rgba(8,18,32,.92);border:1.5px solid rgba(120,180,255,.5);box-shadow:0 2px 10px rgba(0,0,0,.5)';
+      a.addEventListener('click', e => { e.stopPropagation(); bar.scrollBy({ left: dir * (colW + GAP), behavior: 'smooth' }); setTimeout(place, 400); });
+      if (pc) pc.appendChild(a); return a; };
+    let colW = BW;
+    const arL = arrow('‹', -1), arR = arrow('›', 1);
+    bar.addEventListener('scroll', () => place(), { passive: true });
     if (pc) pc.appendChild(bar); else { bar.style.cssText += ';left:0;right:0;bottom:3%;margin:0 auto;width:max-content;z-index:61'; zh.appendChild(bar); }
     const FLOAT = ';position:absolute;z-index:61;left:0;right:0;bottom:3%;top:auto;height:52px;margin:0 auto;width:max-content';
+    const big = on => items.forEach(it => {
+      const B = on && BIG, b = it.b;
+      if (B) b.dataset.big = '1'; else delete b.dataset.big;
+      b.style.flexDirection = B ? 'column' : 'row'; b.style.justifyContent = 'center'; b.style.gap = B ? '6px' : '8px';
+      b.style.borderRadius = B ? '16px' : '14px'; b.style.fontSize = B ? '17px' : '15px';
+      it.ic.style.setProperty('--mdc-icon-size', B ? '38px' : '20px'); it.ic.style.fontSize = B ? '34px' : '18px';
+      it.tx.style.flex = B ? 'none' : '1'; it.tx.style.textAlign = B ? 'center' : 'left'; it.tx.style.maxWidth = '100%';
+      it.pw.style.fontSize = B ? '13px' : '12px';
+    });
     const place = () => {
       if (!pc) return;
       if (pc.style.display === 'none') pc.style.display = '';
       if (getComputedStyle(pc).visibility === 'hidden') {             // Tuyaux : panneau « Batteries · entrée / sortie » (là où se met le chauffe-eau)
         const z = root.getElementById('lZd'), lp = z && z.parentNode;
         if (lp) {
-          if (bar.parentNode !== lp) { lp.appendChild(bar); bar.style.cssText = 'position:absolute;z-index:5;display:grid;gap:6px;left:12px;right:12px;grid-auto-flow:row;grid-template-columns:repeat(' + Math.min(3, list.length) + ',1fr)'; }
+          if (bar.parentNode !== lp) { big(false); lp.appendChild(bar); bar.style.cssText = 'position:absolute;z-index:5;display:grid;gap:6px;left:12px;right:12px;grid-auto-flow:row;grid-template-columns:repeat(' + Math.min(3, list.length) + ',1fr)'; }
           const kids = [...lp.children].filter(c => c !== bar && c.offsetHeight);
           const top = Math.max(...kids.map(c => c.offsetTop + c.offsetHeight)) + 8, h = lp.clientHeight - top - 10;
           bar.style.top = top + 'px'; bar.style.height = Math.max(28, h) + 'px';
-          bar.style.gridTemplateRows = 'repeat(' + Math.ceil(list.length / 3) + ',1fr)';
+          bar.style.gridTemplateRows = 'repeat(' + Math.ceil(list.length / 3) + ',1fr)'; arL.style.display = arR.style.display = 'none';
           items.forEach(it => { it.b.style.fontSize = list.length > 3 ? '12px' : '14px'; it.b.style.padding = '0 8px'; });
           return;
         }
         if (bar.parentNode !== zh) { zh.appendChild(bar); bar.style.cssText += FLOAT; bar.style.gridTemplateRows = '1fr'; }
         return;
       }
-      if (bar.parentNode !== pc) { pc.appendChild(bar); bar.style.margin = '0'; bar.style.bottom = 'auto'; bar.style.right = 'auto'; bar.style.width = 'auto'; bar.style.zIndex = '5'; bar.style.gridTemplateRows = '1fr 1fr'; }
-      const tiles = [...pc.querySelectorAll(':scope>.tile')].filter(t => t.style.display !== 'none' && t.offsetWidth);
+      if (bar.parentNode !== pc) { pc.appendChild(bar); bar.style.margin = '0'; bar.style.bottom = 'auto'; bar.style.right = 'auto'; bar.style.width = 'auto'; bar.style.zIndex = '5'; bar.style.gridTemplateRows = ROWS; big(true); }
+      const tiles = [...pc.querySelectorAll(':scope>.tile')].filter(t => t !== bar && t.style.display !== 'none' && t.offsetWidth);
+      tiles.forEach(t => { if (!t.dataset.w0) t.dataset.w0 = t.offsetWidth; });
       const top = tiles.length ? tiles[0].offsetTop : 38, h = tiles.length ? tiles[0].offsetHeight : 108;
-      const aw = nCol * BW + (nCol - 1) * GAP, ax = pc.clientWidth - 14 - aw;
-      bar.style.left = ax + 'px'; bar.style.top = top + 'px'; bar.style.height = h + 'px';
-      if (tiles.length && Math.max(...tiles.map(t => t.offsetLeft + t.offsetWidth)) > ax - 10) {   // tuiles trop larges : on les resserre à gauche
-        const tw = Math.floor((ax - 10 - 14 - (tiles.length - 1) * 9) / tiles.length);
-        tiles.forEach((t, k) => { t.style.width = tw + 'px'; t.style.left = (14 + k * (tw + 9)) + 'px'; t.style.right = 'auto'; t.style.flex = 'none'; });
-      }
+      const PW = pc.clientWidth, MINW = 210, aw = nCol * BW + (nCol - 1) * GAP;
+      // place des tuiles : taille d'origine si tout tient, sinon resserrées jusqu'à MINW
+      const natural = tiles.reduce((a, t) => a + (+t.dataset.w0) + 9, 0);
+      let tw = null;
+      if (tiles.length && 14 + natural + 10 + aw + 14 > PW) tw = Math.max(MINW, Math.floor((PW - 14 - aw - 10 - 14 - (tiles.length - 1) * 9) / tiles.length));
+      if (tw) tw = Math.max(150, Math.min(tw, Math.floor((PW - 14 - BW - 10 - 14 - (tiles.length - 1) * 9) / tiles.length)));   // garder au moins une colonne de boutons
+      let x = 14;
+      tiles.forEach(t => { const w = tw || +t.dataset.w0; if (tw) { t.style.width = w + 'px'; t.style.right = 'auto'; t.style.flex = 'none'; } t.style.left = x + 'px'; x += w + 9; });
+      const ax = tiles.length ? x + 1 : 14, avail = PW - 14 - ax;
+      // colonnes : largeur ajustée (150 px mini) pour remplir la place avec un nombre entier de colonnes
+      const kc = Math.max(1, Math.min(Math.ceil(list.length / (BIG ? 1 : 2)), Math.floor((avail + GAP) / (150 + GAP))));
+      colW = Math.min(BW, Math.floor((avail - (kc - 1) * GAP) / kc)); if (avail < 150) colW = 150;
+      bar.style.gridTemplateColumns = 'repeat(' + nCol + ',' + colW + 'px)'; bar.style.gridAutoColumns = colW + 'px';
+      const aw2 = nCol * colW + (nCol - 1) * GAP, bw = kc * colW + (kc - 1) * GAP;
+      const left = bw >= aw2 ? PW - 14 - aw2 : PW - 14 - bw;
+      bar.style.left = left + 'px'; bar.style.top = top + 'px'; bar.style.height = h + 'px';
+      bar.style.width = Math.min(aw2, bw) + 'px';
+      // trop de boutons pour la place : défilement avec flèches
+      const sc = bar.scrollWidth > bar.clientWidth + 2;
+      arL.style.display = sc && bar.scrollLeft > 2 ? 'flex' : 'none';
+      arR.style.display = sc && bar.scrollLeft + bar.clientWidth < bar.scrollWidth - 2 ? 'flex' : 'none';
+      const ay = top + h / 2 - 18;
+      arL.style.top = arR.style.top = ay + 'px';
+      arL.style.left = (left - 6) + 'px'; arR.style.left = (left + bar.clientWidth - 30) + 'px';
     };
     const items = list.map(cfg => {
       const b = D.createElement('button'); b.type = 'button';
@@ -2241,7 +2278,7 @@ class EnergieCard extends HTMLElement {
         card._hass.callService(d2, svc, { entity_id: cfg.entity });
         b.style.transform = 'scale(.94)'; setTimeout(() => b.style.transform = '', 150);
       });
-      return { b, tx, pw, cfg, dom };
+      return { b, tx, pw, cfg, dom, ic: icEl };
     });
     const fmt = w => Math.abs(w) >= 1000 ? (w / 1000).toFixed(1).replace('.', ',') + ' kW' : Math.round(w) + ' W';
     const paint = () => {
@@ -2257,10 +2294,11 @@ class EnergieCard extends HTMLElement {
         let w = null;
         if (it.cfg.power && H.states[it.cfg.power]) w = parseFloat(H.states[it.cfg.power].state);
         else if (s && s.attributes) w = parseFloat(s.attributes.current_power_w ?? s.attributes.power ?? NaN);
-        it.pw.textContent = isFinite(w) && on ? fmt(w) : '';
+        it.pw.textContent = isFinite(w) && on ? fmt(w) : (it.b.dataset.big ? (na ? 'indisponible' : on ? 'allumé' : 'éteint') : '');
         it.b.title = (it.cfg.name || it.cfg.entity) + ' : ' + (na ? 'indisponible' : st) + ' · appui long = détails';
       });
     };
+    if (bar.parentNode === pc) big(true);
     const iv = setInterval(() => { paint(); place(); }, 1000); run.intervals.add(iv); paint(); place(); setTimeout(place, 300);
   }
 
@@ -2467,7 +2505,7 @@ const HELPERS = {
   capacity: 'À additionner. Isypower/Izypower : Titan seul 2,1 · Link 2,1 · nouveau Link 4,032. Zendure : AB1000 0,96 · AB2000 1,92 · AB3000L 2,88 · SolarFlow 2400 AC+ 2,4 (batterie intégrée). Vide = packs × capacité d’un pack.',
   kwh_pack: 'Utilisé seulement pour les batteries sans capacité indiquée (2,1 = un Titan seul)',
   brand: 'Automatique : selon les batteries détectées',
-  style: 'Nouveau : vue Réacteur sombre et nette. Classique : salle des machines claire (version d’origine). Tuyaux : salle aux tuyaux bleus de tazzdel, détection de batteries toutes marques. Supervision : poste de supervision, laboratoire domestique.',
+  style: 'Nouveau : vue Réacteur sombre et nette. Classique : salle des machines claire (version d’origine). Tuyaux : salle aux tuyaux bleus de tazzdel, détection de batteries toutes marques.',
   hc_text: 'Une ou plusieurs plages, ex. 22:00-06:00 ou 01:04-06:34, 14:34-17:04',
   packs_text: 'Dans l’ordre des batteries, ex. 1, 2',
   fit_screen: 'La carte entière reste visible sans défiler',
@@ -2485,7 +2523,7 @@ const bat = i => ({ type: 'expandable', name: 'bat' + i, title: 'Batterie ' + i,
 const NUM = (step, unit) => ({ number: { mode: 'box', step, unit_of_measurement: unit } });
 const SCHEMA = [
   { name: 'style', selector: { select: { mode: 'dropdown', options: [
-    { value: 'new', label: 'Nouveau (v2.7)' }, { value: 'classic', label: 'Classique (v2)' }, { value: 'tuyaux', label: 'Tuyaux (salle de tazzdel)' }, { value: 'supervision', label: 'Supervision' }] } } },
+    { value: 'new', label: 'Nouveau (v2.7)' }, { value: 'classic', label: 'Classique (v2)' }, { value: 'tuyaux', label: 'Tuyaux (salle de tazzdel)' }] } } },
   { type: 'expandable', name: 'entities', title: 'Capteurs principaux', icon: 'mdi:solar-power', schema: [
     { name: 'pv', selector: SENSOR }, { name: 'grid', selector: SENSOR }, { name: 'ev', selector: SENSOR },
     { name: 'evSoc', selector: SENSOR }, { name: 'evRange', selector: SENSOR }, { name: 'evLid', selector: { entity: {} } },
@@ -2530,7 +2568,7 @@ const MOD_DEFAULTS = { portail: false, garage: false, volets: false, chauffage: 
 /* config ⇄ données du formulaire */
 function toForm(c) {
   const d = Object.assign({}, c);
-  d.style = c.style === 'classic' || c.style === 'tuyaux' || c.style === 'supervision' ? c.style : 'new';
+  d.style = c.style === 'classic' || c.style === 'tuyaux' ? c.style : 'new';
   d.brand = c.brand || 'auto';
   d.fit_screen = c.fit_screen !== false;
   d.fullscreen_button = c.fullscreen_button !== false;
@@ -2571,7 +2609,7 @@ function fromForm(d, type) {
       if (Object.keys(m).length) c.modules = m;
       return;
     }
-    if (k === 'style') { if (d[k] === 'classic' || d[k] === 'tuyaux' || d[k] === 'supervision') c.style = d[k]; return; }
+    if (k === 'style') { if (d[k] === 'classic' || d[k] === 'tuyaux') c.style = d[k]; return; }
     if (k === 'brand') { if (d[k] && d[k] !== 'auto') c.brand = d[k]; return; }
     if (k === 'fit_screen' || k === 'fullscreen_button' || k === 'swipe') { if (d[k] === false) c[k] = false; return; }
     if (k !== 'type') c[k] = d[k];

@@ -7,7 +7,7 @@ Un tableau de bord énergie complet, en **une seule carte** : production solaire
 
 Deux vues au choix : **⚡ Énergie** (poste de supervision) et **⚛ Réacteur** (salle des machines animée).
 
-Et quatre **styles** : **Nouveau** (réacteur sombre et net, barre de navigation), **Classique** (salle des machines claire, version d'origine), **Tuyaux** (la nouvelle salle aux tuyaux bleus de tazzdel, avec détection de batteries toutes marques) ou **Supervision** (poste de commande façon laboratoire, une seule vue). Le choix se fait dans l'éditeur de la carte.
+Et trois **styles** : **Nouveau** (réacteur sombre et net, barre de navigation), **Classique** (salle des machines claire, version d'origine) ou **Tuyaux** (la nouvelle salle aux tuyaux bleus de tazzdel, avec détection de batteries toutes marques). Le choix se fait dans l'éditeur de la carte.
 
 ### Style Nouveau (par défaut)
 ![Vue Énergie — style Nouveau](images/energie.jpg)
@@ -16,11 +16,6 @@ Et quatre **styles** : **Nouveau** (réacteur sombre et net, barre de navigation
 ### Style Classique
 ![Vue Énergie — style Classique](images/classique-energie.jpg)
 ![Vue Réacteur — style Classique](images/classique-reacteur.jpg)
-
-### Style Supervision (poste de commande)
-![Style Supervision](images/supervision-energie.jpg)
-
-Une seule vue, très lisible : flux en direct, performance du jour, courbe 24 h, batteries et commandes de la maison. Pas de vue Réacteur dans ce style.
 
 ### Style Tuyaux (salle de tazzdel)
 ![Vue Réacteur — style Tuyaux](images/tuyaux-reacteur.jpg)
@@ -61,7 +56,7 @@ Les mises à jour arrivent ensuite dans le Marketplace, comme pour les autres ca
 
 ### Installation manuelle
 
-1. Téléchargez `energie-card.js`, `energie-card-classic.js`, `energie-card-tuyaux.js` **et** `energie-card-supervision.js` (dossier `dist`).
+1. Téléchargez `energie-card.js`, `energie-card-classic.js` **et** `energie-card-tuyaux.js` (dossier `dist`).
 2. Copiez-les tous dans `/config/www/`. Seul `energie-card.js` s'ajoute comme ressource.
 3. **Paramètres › Tableaux de bord › ⋮ › Ressources › Ajouter** : URL `/local/energie-card.js?v=1`, type **Module JavaScript**.
 4. Rechargez la page. Après chaque mise à jour, passez à `?v=2`, `?v=3`…
@@ -81,7 +76,7 @@ Si un capteur est mal détecté, ouvrez la carte en modification : l'**éditeur 
 
 | Rubrique | Ce qu'on y règle |
 |---|---|
-| Style du tableau de bord | Nouveau (v2.7), Classique (v2), Tuyaux (salle de tazzdel) ou Supervision |
+| Style du tableau de bord | Nouveau (v2.7), Classique (v2) ou Tuyaux (salle de tazzdel) |
 | Capteurs principaux | solaire, réseau, borne voiture, niveau et autonomie voiture, ballon ECS |
 | Météo, température, prévisions | entité météo, température de la maison, Solcast aujourd'hui / demain |
 | Batteries | jusqu'à 4 batteries : nom, niveau, puissance, température, **capacité (kWh)**, réglages mini / maxi ; marque affichée (automatique, Isypower, Izypower, Zendure ou sans marque) |
@@ -99,7 +94,7 @@ Un champ laissé vide = détection automatique.
 type: custom:energie-card
 mode_auto: input_boolean.mode_automatique_energie   # bouton ⏻ AUTO / MANUEL (YAML uniquement, 2ᵉ appui pour confirmer)
 view_arrows: false        # ordinateur : garder le bouton Énergie/Réacteur au lieu des flèches sur le bord
-style: classic            # classic = Classique (v2), tuyaux = salle de tazzdel, supervision = poste de supervision ; absent = Nouveau (v2.7)
+style: classic            # classic = Classique (v2), tuyaux = salle de tazzdel ; absent = Nouveau (v2.7)
 entities:                 # '' ou absent = détection automatique
   pv: sensor.puissance_solaire        # W
   grid: sensor.puissance_reseau       # W, positif = soutirage
@@ -228,7 +223,7 @@ Ajoutez jusqu'à **6 boutons** pour piloter ce que vous voulez depuis le tableau
 - **Un appui** allume ou éteint (ouvre ou ferme un volet, lance un script ou une scène).
 - **Un appui long** ouvre la fenêtre détail de Home Assistant (historique, réglages).
 - Le bouton s'allume en **vert** quand l'appareil est en marche et affiche sa consommation si la prise la fournit (ou si vous indiquez un capteur de consommation).
-- Les boutons se rangent dans le panneau **Maison · commandes**, à droite des tuiles (chauffage, chauffe-eau…). Style Tuyaux : dans le panneau **Batteries · entrée / sortie**.
+- Les boutons se rangent dans le panneau **Maison · commandes**, à droite des tuiles (chauffage, chauffe-eau…). Avec 1 ou 2 boutons, chacun devient une vraie tuile (grande icône, nom, état ou consommation) ; à partir de 3, ils se rangent sur deux rangées. S'il n'y a pas la place pour tous, des flèches ‹ › permettent de les faire défiler (ou glissez du doigt). Style Tuyaux : dans le panneau **Batteries · entrée / sortie**.
 
 ## Portail et porte de garage
 
@@ -275,7 +270,6 @@ Les tableaux de bord se modifient en HTML, comme avant :
 - `src/energie.html` : style **Nouveau** → `dist/energie-card.js` (carte principale)
 - `src/energie-classic.html` : style **Classique** → `dist/energie-card-classic.js` (chargé seulement si ce style est choisi)
 - `src/energie-tuyaux.html` : style **Tuyaux** (tazzdel) → `dist/energie-card-tuyaux.js` (chargé seulement si ce style est choisi)
-- `src/energie-supervision.html` : style **Supervision** → `dist/energie-card-supervision.js` (chargé seulement si ce style est choisi)
 
 La carte est générée automatiquement :
 
