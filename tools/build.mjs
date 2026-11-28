@@ -388,6 +388,5 @@ try {
     buildMain(new URL('../src/energie.html', import.meta.url), new URL('../dist/energie-card.js', import.meta.url));
     buildClassic(new URL('../src/energie-classic.html', import.meta.url), new URL('../dist/energie-card-classic.js', import.meta.url));
     buildClassic(new URL('../src/energie-tuyaux.html', import.meta.url), new URL('../dist/energie-card-tuyaux.js', import.meta.url), 'tuyaux', 'Tuyaux (salle de tazzdel)', 'tuyaux');
-    buildClassic(new URL('../src/energie-supervision.html', import.meta.url), new URL('../dist/energie-card-supervision.js', import.meta.url), 'supervision', 'Supervision', 'sup');
   }
 } catch (e) { console.error(e.message); process.exit(1); }

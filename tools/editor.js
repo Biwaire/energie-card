@@ -34,7 +34,7 @@ const HELPERS = {
   capacity: 'À additionner. Isypower/Izypower : Titan seul 2,1 · Link 2,1 · nouveau Link 4,032. Zendure : AB1000 0,96 · AB2000 1,92 · AB3000L 2,88 · SolarFlow 2400 AC+ 2,4 (batterie intégrée). Vide = packs × capacité d’un pack.',
   kwh_pack: 'Utilisé seulement pour les batteries sans capacité indiquée (2,1 = un Titan seul)',
   brand: 'Automatique : selon les batteries détectées',
-  style: 'Nouveau : vue Réacteur sombre et nette. Classique : salle des machines claire (version d’origine). Tuyaux : salle aux tuyaux bleus de tazzdel, détection de batteries toutes marques. Supervision : poste de supervision, laboratoire domestique.',
+  style: 'Nouveau : vue Réacteur sombre et nette. Classique : salle des machines claire (version d’origine). Tuyaux : salle aux tuyaux bleus de tazzdel, détection de batteries toutes marques.',
   hc_text: 'Une ou plusieurs plages, ex. 22:00-06:00 ou 01:04-06:34, 14:34-17:04',
   packs_text: 'Dans l’ordre des batteries, ex. 1, 2',
   fit_screen: 'La carte entière reste visible sans défiler',
@@ -52,7 +52,7 @@ const bat = i => ({ type: 'expandable', name: 'bat' + i, title: 'Batterie ' + i,
 const NUM = (step, unit) => ({ number: { mode: 'box', step, unit_of_measurement: unit } });
 const SCHEMA = [
   { name: 'style', selector: { select: { mode: 'dropdown', options: [
-    { value: 'new', label: 'Nouveau (v2.7)' }, { value: 'classic', label: 'Classique (v2)' }, { value: 'tuyaux', label: 'Tuyaux (salle de tazzdel)' }, { value: 'supervision', label: 'Supervision' }] } } },
+    { value: 'new', label: 'Nouveau (v2.7)' }, { value: 'classic', label: 'Classique (v2)' }, { value: 'tuyaux', label: 'Tuyaux (salle de tazzdel)' }] } } },
   { type: 'expandable', name: 'entities', title: 'Capteurs principaux', icon: 'mdi:solar-power', schema: [
     { name: 'pv', selector: SENSOR }, { name: 'grid', selector: SENSOR }, { name: 'ev', selector: SENSOR },
     { name: 'evSoc', selector: SENSOR }, { name: 'evRange', selector: SENSOR }, { name: 'evLid', selector: { entity: {} } },
@@ -97,7 +97,7 @@ const MOD_DEFAULTS = { portail: false, garage: false, volets: false, chauffage: 
 /* config ⇄ données du formulaire */
 function toForm(c) {
   const d = Object.assign({}, c);
-  d.style = c.style === 'classic' || c.style === 'tuyaux' || c.style === 'supervision' ? c.style : 'new';
+  d.style = c.style === 'classic' || c.style === 'tuyaux' ? c.style : 'new';
   d.brand = c.brand || 'auto';
   d.fit_screen = c.fit_screen !== false;
   d.fullscreen_button = c.fullscreen_button !== false;
@@ -138,7 +138,7 @@ function fromForm(d, type) {
       if (Object.keys(m).length) c.modules = m;
       return;
     }
-    if (k === 'style') { if (d[k] === 'classic' || d[k] === 'tuyaux' || d[k] === 'supervision') c.style = d[k]; return; }
+    if (k === 'style') { if (d[k] === 'classic' || d[k] === 'tuyaux') c.style = d[k]; return; }
     if (k === 'brand') { if (d[k] && d[k] !== 'auto') c.brand = d[k]; return; }
     if (k === 'fit_screen' || k === 'fullscreen_button' || k === 'swipe') { if (d[k] === false) c[k] = false; return; }
     if (k !== 'type') c[k] = d[k];
